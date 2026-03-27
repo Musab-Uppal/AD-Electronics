@@ -1,0 +1,8 @@
+# Optional reverse proxy setup for Apache-based cPanel environments.
+
+# Use this only if your host requires Apache to proxy requests to the Node.js app port.
+
+RewriteEngine On
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^(.\*)$ http://127.0.0.1:%{ENV:PORT}/$1 [P,L]

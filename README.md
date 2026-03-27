@@ -1,36 +1,123 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Installment and Order Management System
 
-## Getting Started
+Full-stack Next.js (Pages Router) application for small business installment/order tracking.
 
-First, run the development server:
+## Tech Stack
+
+- Next.js Pages Router
+- MySQL via `mysql2/promise` (raw SQL, no ORM)
+- Session auth via `iron-session`
+- Tailwind CSS
+
+## Features
+
+- Secure admin login/logout with cookie session
+- Dashboard with:
+  - Overdue alerts
+  - Upcoming payments
+  - Summary stats
+- Customer management:
+  - List + search by name/phone
+  - Add customer
+- Order management:
+  - List + filter (all/pending/complete)
+  - Add order
+  - View order details
+  - Make payments (page + modal option)
+
+## Required Environment Variables
+
+Create/update `.env.local`:
+
+```env
+DB_HOST=localhost
+DB_USER=your_db_user
+DB_PASSWORD=your_db_password
+DB_NAME=your_db_name
+SESSION_SECRET=a_long_random_secret_string_32chars
+ADMIN_USERNAME=admin
+ADMIN_PASSWORD=admin123
+```
+
+## Database Initialization
+
+No migration package is used.
+
+On first run, `src/lib/db.js` automatically creates:
+
+- `customers`
+- `orders`
+
+using `CREATE TABLE IF NOT EXISTS` queries.
+
+## Local Development
+
+1. Install dependencies:
+
+```bash
+npm install
+```
+
+2. Start dev server:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+3. Open:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+`http://localhost:3000`
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## API Routes
 
-## Learn More
+- `POST /api/auth/login`
+- `POST /api/auth/logout`
+- `GET, POST /api/customers`
+- `GET /api/customers/[phone]`
+- `GET, POST /api/orders`
+- `GET /api/orders/[id]`
+- `POST /api/orders/[id]/payment`
+- `GET /api/dashboard`
 
-To learn more about Next.js, take a look at the following resources:
+All protected API routes enforce authentication and return `401` when unauthenticated.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## cPanel Deployment (Node.js App)
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+This project includes a custom Node entry file: `server.js`.
 
-## Deploy on Vercel
+1. Upload project to cPanel file manager or via Git.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+2. In cPanel, open **Setup Node.js App**:
+   - Create/select Node.js app
+   - Set application root to this project folder
+   - Set startup file to `server.js`
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+3. Set environment variables in cPanel (same keys as `.env.local`):
+   - `DB_HOST`
+   - `DB_USER`
+   - `DB_PASSWORD`
+   - `DB_NAME`
+   - `SESSION_SECRET`
+   - `ADMIN_USERNAME`
+   - `ADMIN_PASSWORD`
+
+4. Open cPanel terminal in the project folder and run:
+
+```bash
+npm install
+npm run build
+```
+
+5. Restart the Node.js app from cPanel.
+
+6. Visit your domain.
+
+### Optional Apache Proxy
+
+An optional `.htaccess` is included for hosts that require Apache reverse proxy forwarding to the Node app port. Use it only if your hosting provider requires that setup.
+
+## Production Notes
+
+- Keep `SESSION_SECRET` at least 32 characters.
+- Use a strong `ADMIN_PASSWORD`.
+- Use HTTPS in production so secure cookies are transmitted safely.

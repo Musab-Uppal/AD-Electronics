@@ -1,0 +1,215 @@
+import { query } from "@/lib/db";
+import { withPageAuth } from "@/lib/session";
+import Head from "next/head";
+import Link from "next/link";
+import { useRouter } from "next/router";
+
+function formatDate(value) {
+  if (!value) {
+    return "-";
+  }
+
+  return new Date(value).toISOString().slice(0, 10);
+}
+
+function currency(value) {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+  }).format(Number(value || 0));
+}
+
+export default function OrdersPage({ orders, filter, phone }) {
+  const router = useRouter();
+
+  function setFilter(nextFilter) {
+    const params = new URLSearchParams();
+    if (nextFilter && nextFilter !== "all") {
+      params.set("filter", nextFilter);
+    }
+    if (phone) {
+      params.set("phone", phone);
+    }
+
+    const queryString = params.toString();
+    router.push(queryString ? `/orders?${queryString}` : "/orders");
+  }
+
+  return (
+    <>
+      <Head>
+        <title>Orders | Installment Desk</title>
+      </Head>
+
+      <section className="space-y-5">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="text-2xl font-bold text-slate-900">Orders</h2>
+            {phone ? (
+              <p className="text-sm text-slate-600">
+                Filtered for phone: {phone}
+              </p>
+            ) : null}
+          </div>
+          <Link
+            href="/orders/add"
+            className="rounded-full bg-amber-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-amber-600"
+          >
+            Add New Order
+          </Link>
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          {[
+            { key: "all", label: "All" },
+            { key: "pending", label: "Pending" },
+            { key: "complete", label: "Complete" },
+          ].map((option) => (
+            <button
+              key={option.key}
+              type="button"
+              onClick={() => setFilter(option.key)}
+              className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
+                filter === option.key
+                  ? "bg-slate-900 text-white"
+                  : "bg-white text-slate-700 ring-1 ring-slate-300 hover:bg-slate-50"
+              }`}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+
+        <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm">
+          <table className="min-w-full divide-y divide-slate-200 text-sm">
+            <thead className="bg-slate-50 text-left text-slate-700">
+              <tr>
+                <th className="px-4 py-3 font-semibold">Customer Name</th>
+                <th className="px-4 py-3 font-semibold">Phone</th>
+                <th className="px-4 py-3 font-semibold">Items</th>
+                <th className="px-4 py-3 font-semibold">Total</th>
+                <th className="px-4 py-3 font-semibold">Advance</th>
+                <th className="px-4 py-3 font-semibold">Remaining</th>
+                <th className="px-4 py-3 font-semibold">Purchase Date</th>
+                <th className="px-4 py-3 font-semibold">Next Payment Date</th>
+                <th className="px-4 py-3 font-semibold">Status</th>
+                <th className="px-4 py-3 font-semibold">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 text-slate-700">
+              {orders.length === 0 ? (
+                <tr>
+                  <td
+                    className="px-4 py-4 text-center text-slate-500"
+                    colSpan={10}
+                  >
+                    No orders found.
+                  </td>
+                </tr>
+              ) : (
+                orders.map((order) => (
+                  <tr key={order.id}>
+                    <td className="px-4 py-3 font-medium text-slate-900">
+                      {order.customer_name}
+                    </td>
+                    <td className="px-4 py-3">{order.customer_phone}</td>
+                    <td className="max-w-xs px-4 py-3">{order.items}</td>
+                    <td className="px-4 py-3">{currency(order.total)}</td>
+                    <td className="px-4 py-3">
+                      {currency(order.advance_payment)}
+                    </td>
+                    <td className="px-4 py-3">
+                      {currency(order.remaining_balance)}
+                    </td>
+                    <td className="px-4 py-3">
+                      {formatDate(order.purchase_date)}
+                    </td>
+                    <td className="px-4 py-3">
+                      {formatDate(order.next_payment_date)}
+                    </td>
+                    <td className="px-4 py-3">
+                      <span
+                        className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                          order.is_complete
+                            ? "bg-emerald-100 text-emerald-800"
+                            : "bg-amber-100 text-amber-800"
+                        }`}
+                      >
+                        {order.is_complete ? "Complete" : "Pending"}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex gap-3">
+                        {!order.is_complete ? (
+                          <Link
+                            href={`/orders/${order.id}/payment`}
+                            className="font-semibold text-amber-700 hover:text-amber-900"
+                          >
+                            Make Payment
+                          </Link>
+                        ) : (
+                          <span className="text-slate-400">-</span>
+                        )}
+                        <Link
+                          href={`/orders/${order.id}`}
+                          className="font-semibold text-slate-700 hover:text-slate-900"
+                        >
+                          View
+                        </Link>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </>
+  );
+}
+
+export const getServerSideProps = withPageAuth(
+  async function getServerSideProps(context) {
+    const filter = String(context.query.filter || "all");
+    const phone = String(context.query.phone || "").trim();
+
+    let sql = `
+    SELECT id, customer_name, customer_phone, items, total, advance_payment,
+           remaining_balance, purchase_date, next_payment_date, is_complete
+    FROM orders
+  `;
+
+    const clauses = [];
+    const params = [];
+
+    if (filter === "pending") {
+      clauses.push("is_complete = FALSE");
+    }
+
+    if (filter === "complete") {
+      clauses.push("is_complete = TRUE");
+    }
+
+    if (phone) {
+      clauses.push("customer_phone = ?");
+      params.push(phone);
+    }
+
+    if (clauses.length > 0) {
+      sql += ` WHERE ${clauses.join(" AND ")}`;
+    }
+
+    sql += " ORDER BY purchase_date DESC, id DESC";
+
+    const orders = await query(sql, params);
+
+    return {
+      props: {
+        orders: JSON.parse(JSON.stringify(orders)),
+        filter,
+        phone,
+      },
+    };
+  },
+);
