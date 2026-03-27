@@ -1,15 +1,25 @@
 @import "tailwindcss";
 
 :root {
-  --app-bg: #fff8e7;
+  --app-bg: #f6f1e8;
   --app-fg: #0f172a;
   --panel-bg: #ffffff;
+  --panel-muted: #fffaf2;
+  --brand: #d97706;
+  --brand-deep: #92400e;
 }
 
 body {
   margin: 0;
   min-height: 100vh;
-  background: var(--app-bg);
+  background:
+    radial-gradient(circle at 8% -2%, rgba(217, 119, 6, 0.16), transparent 45%),
+    radial-gradient(
+      circle at 92% 12%,
+      rgba(59, 130, 246, 0.13),
+      transparent 42%
+    ),
+    linear-gradient(135deg, #faf5ea 0%, #f8fafc 44%, #fff2d8 100%);
   color: var(--app-fg);
   font-family: var(--font-manrope), "Trebuchet MS", "Segoe UI", sans-serif;
 }
@@ -21,6 +31,10 @@ body {
 a {
   color: inherit;
   text-decoration: none;
+}
+
+::selection {
+  background: rgba(217, 119, 6, 0.28);
 }
 
 @keyframes enter-up {
@@ -36,4 +50,21 @@ a {
 
 .enter-up {
   animation: enter-up 280ms ease-out both;
+}
+
+.grain-overlay {
+  position: relative;
+}
+
+.grain-overlay::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image: radial-gradient(
+    rgba(15, 23, 42, 0.04) 0.7px,
+    transparent 0.7px
+  );
+  background-size: 3px 3px;
+  opacity: 0.25;
 }

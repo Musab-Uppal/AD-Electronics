@@ -14,6 +14,15 @@ function dateValue(value) {
   return new Date(value).toISOString().slice(0, 10);
 }
 
+function formatRs(value) {
+  const amount = Number(value || 0).toLocaleString("en-PK", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+
+  return `Rs ${amount}`;
+}
+
 export default function OrderPaymentPage({ order }) {
   const router = useRouter();
   const [amount, setAmount] = useState("");
@@ -61,18 +70,17 @@ export default function OrderPaymentPage({ order }) {
   return (
     <>
       <Head>
-        <title>Payment | Order #{order.id}</title>
+        <title>Payment | Order #{order.id} | AD Electronics</title>
       </Head>
 
-      <section className="mx-auto w-full max-w-xl space-y-5 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+      <section className="mx-auto w-full max-w-xl space-y-5 rounded-3xl border border-amber-200 bg-[linear-gradient(150deg,_#fff8eb,_#ffffff)] p-6 shadow-sm">
         <div>
           <h2 className="text-2xl font-bold text-slate-900">Make Payment</h2>
           <p className="text-sm text-slate-600">
             Order #{order.id} for {order.customer_name}
           </p>
           <p className="mt-1 text-sm font-semibold text-slate-800">
-            Remaining balance: $
-            {Number(order.remaining_balance || 0).toFixed(2)}
+            Remaining balance: {formatRs(order.remaining_balance)}
           </p>
         </div>
 
@@ -128,7 +136,7 @@ export default function OrderPaymentPage({ order }) {
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="rounded-xl bg-amber-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-amber-600 disabled:cursor-not-allowed disabled:opacity-70"
+                className="rounded-xl bg-[linear-gradient(135deg,_#f59e0b,_#d97706)] px-4 py-2 text-sm font-semibold text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-70"
               >
                 {isSubmitting ? "Saving..." : "Save Payment"}
               </button>

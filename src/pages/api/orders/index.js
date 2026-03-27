@@ -1,4 +1,4 @@
-import { query } from "@/lib/db";
+import { ensureTables, getPool, query } from "@/lib/db";
 import { withApiAuth } from "@/lib/session";
 
 function formatDate(value) {
@@ -102,30 +102,59 @@ export default withApiAuth(async function handler(req, res) {
     const completeFromBalance = calculatedRemaining <= 0;
     const finalIsComplete = parseBoolean(is_complete) || completeFromBalance;
 
-    const insertResult = await query(
-      `
-        INSERT INTO orders (
-          customer_phone, customer_name, items, total, advance_payment,
-          remaining_balance, purchase_date, next_payment_date, is_complete
-        )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `,
-      [
-        customerRows[0].phone,
-        customerRows[0].name,
-        String(items).trim(),
-        totalNumber,
-        advanceNumber,
-        finalIsComplete ? 0 : Math.max(calculatedRemaining, 0),
-        purchase_date,
-        next_payment_date || null,
-        finalIsComplete,
-      ],
-    );
+    await ensureTables();
+    const db = getPool();
+    const connection = await db.getConnection();
+
+    let insertId;
+
+    try {
+      await connection.beginTransaction();
+
+      const [insertResult] = await connection.query(
+        `
+          INSERT INTO orders (
+            customer_phone, customer_name, items, total, advance_payment,
+            remaining_balance, purchase_date, next_payment_date, is_complete
+          )
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `,
+        [
+          customerRows[0].phone,
+          customerRows[0].name,
+          String(items).trim(),
+          totalNumber,
+          advanceNumber,
+          calculatedRemaining,
+          purchase_date,
+          next_payment_date || null,
+          finalIsComplete,
+        ],
+      );
+
+      insertId = insertResult.insertId;
+
+      if (advanceNumber > 0) {
+        await connection.query(
+          `
+            INSERT INTO order_payments (order_id, amount, payment_date, payment_source)
+            VALUES (?, ?, ?, 'advance')
+          `,
+          [insertId, advanceNumber, purchase_date],
+        );
+      }
+
+      await connection.commit();
+    } catch (error) {
+      await connection.rollback();
+      throw error;
+    } finally {
+      connection.release();
+    }
 
     return res.status(201).json({
       message: "Order created",
-      id: insertResult.insertId,
+      id: insertId,
     });
   }
 

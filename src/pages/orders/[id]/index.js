@@ -14,14 +14,30 @@ function formatDate(value) {
   return new Date(value).toISOString().slice(0, 10);
 }
 
-function currency(value) {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-  }).format(Number(value || 0));
+function formatDateTime(value) {
+  if (!value) {
+    return "-";
+  }
+
+  return new Date(value).toLocaleString("en-PK", {
+    year: "numeric",
+    month: "short",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }
 
-export default function OrderDetailsPage({ order }) {
+function currency(value) {
+  const amount = Number(value || 0).toLocaleString("en-PK", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+
+  return `Rs ${amount}`;
+}
+
+export default function OrderDetailsPage({ order, payments }) {
   const router = useRouter();
   const [openPaymentModal, setOpenPaymentModal] = useState(false);
 
@@ -33,10 +49,10 @@ export default function OrderDetailsPage({ order }) {
   return (
     <>
       <Head>
-        <title>Order #{order.id} | Installment Desk</title>
+        <title>Order #{order.id} | AD Electronics</title>
       </Head>
 
-      <section className="mx-auto w-full max-w-3xl space-y-5 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+      <section className="mx-auto w-full max-w-3xl space-y-5 rounded-3xl border border-amber-200 bg-[linear-gradient(150deg,_#fff8eb,_#ffffff)] p-6 shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 className="text-2xl font-bold text-slate-900">
             Order #{order.id}
@@ -44,26 +60,18 @@ export default function OrderDetailsPage({ order }) {
           <div className="flex items-center gap-2">
             <Link
               href="/orders"
-              className="rounded-full border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+              className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
             >
               Back to Orders
             </Link>
             {!order.is_complete ? (
-              <>
-                <button
-                  type="button"
-                  onClick={() => setOpenPaymentModal(true)}
-                  className="rounded-full bg-amber-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-amber-600"
-                >
-                  Make Payment (Modal)
-                </button>
-                <Link
-                  href={`/orders/${order.id}/payment`}
-                  className="rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-700"
-                >
-                  Go to Payment Page
-                </Link>
-              </>
+              <button
+                type="button"
+                onClick={() => setOpenPaymentModal(true)}
+                className="rounded-xl bg-[linear-gradient(135deg,_#f59e0b,_#d97706)] px-4 py-2 text-sm font-semibold text-white transition hover:brightness-110"
+              >
+                Make Payment
+              </button>
             ) : null}
           </div>
         </div>
@@ -89,7 +97,9 @@ export default function OrderDetailsPage({ order }) {
             <p className="text-xs uppercase tracking-wide text-slate-500">
               Items
             </p>
-            <p className="mt-1 text-slate-900">{order.items}</p>
+            <p className="mt-1 whitespace-pre-line text-slate-900">
+              {order.items}
+            </p>
           </article>
           <article className="rounded-xl border border-slate-200 bg-slate-50 p-4">
             <p className="text-xs uppercase tracking-wide text-slate-500">
@@ -146,6 +156,60 @@ export default function OrderDetailsPage({ order }) {
             </p>
           </article>
         </div>
+
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-bold text-slate-900">
+              Payment History
+            </h3>
+            <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+              {payments.length} record{payments.length === 1 ? "" : "s"}
+            </p>
+          </div>
+
+          {payments.length === 0 ? (
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
+              No payments recorded yet.
+            </div>
+          ) : (
+            <div className="overflow-hidden rounded-xl border border-slate-200">
+              <table className="min-w-full divide-y divide-slate-200 text-sm">
+                <thead className="bg-slate-50 text-left text-[11px] uppercase tracking-wide text-slate-600">
+                  <tr>
+                    <th className="px-4 py-3 font-semibold">Date and Time</th>
+                    <th className="px-4 py-3 font-semibold">Type</th>
+                    <th className="px-4 py-3 font-semibold">Amount</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {payments.map((payment) => (
+                    <tr key={payment.id} className="bg-white">
+                      <td className="px-4 py-3 text-slate-700">
+                        {formatDateTime(payment.payment_date)}
+                      </td>
+                      <td className="px-4 py-3">
+                        <span
+                          className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${
+                            payment.payment_source === "advance"
+                              ? "bg-blue-100 text-blue-800"
+                              : "bg-amber-100 text-amber-800"
+                          }`}
+                        >
+                          {payment.payment_source === "advance"
+                            ? "Advance"
+                            : "Installment"}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 font-semibold text-slate-900">
+                        {currency(payment.amount)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
       </section>
 
       {openPaymentModal ? (
@@ -169,16 +233,27 @@ export const getServerSideProps = withPageAuth(
   async function getServerSideProps(context) {
     const { id } = context.params;
 
-    const rows = await query(
-      `
-      SELECT id, customer_name, customer_phone, items, total, advance_payment, remaining_balance,
-             purchase_date, next_payment_date, is_complete
-      FROM orders
-      WHERE id = ?
-      LIMIT 1
-    `,
-      [id],
-    );
+    const [rows, payments] = await Promise.all([
+      query(
+        `
+        SELECT id, customer_name, customer_phone, items, total, advance_payment, remaining_balance,
+               purchase_date, next_payment_date, is_complete
+        FROM orders
+        WHERE id = ?
+        LIMIT 1
+      `,
+        [id],
+      ),
+      query(
+        `
+        SELECT id, amount, payment_date, payment_source
+        FROM order_payments
+        WHERE order_id = ?
+        ORDER BY payment_date ASC, id ASC
+      `,
+        [id],
+      ),
+    ]);
 
     if (rows.length === 0) {
       return { notFound: true };
@@ -187,6 +262,7 @@ export const getServerSideProps = withPageAuth(
     return {
       props: {
         order: JSON.parse(JSON.stringify(rows[0])),
+        payments: JSON.parse(JSON.stringify(payments)),
       },
     };
   },

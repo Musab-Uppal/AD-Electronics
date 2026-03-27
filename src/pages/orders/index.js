@@ -13,10 +13,12 @@ function formatDate(value) {
 }
 
 function currency(value) {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-  }).format(Number(value || 0));
+  const amount = Number(value || 0).toLocaleString("en-PK", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+
+  return `Rs ${amount}`;
 }
 
 export default function OrdersPage({ orders, filter, phone }) {
@@ -24,7 +26,7 @@ export default function OrdersPage({ orders, filter, phone }) {
 
   function setFilter(nextFilter) {
     const params = new URLSearchParams();
-    if (nextFilter && nextFilter !== "all") {
+    if (nextFilter && nextFilter !== "pending") {
       params.set("filter", nextFilter);
     }
     if (phone) {
@@ -38,25 +40,36 @@ export default function OrdersPage({ orders, filter, phone }) {
   return (
     <>
       <Head>
-        <title>Orders | Installment Desk</title>
+        <title>Orders | AD Electronics</title>
       </Head>
 
       <section className="space-y-5">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h2 className="text-2xl font-bold text-slate-900">Orders</h2>
-            {phone ? (
-              <p className="text-sm text-slate-600">
-                Filtered for phone: {phone}
+        <div className="grain-overlay relative overflow-hidden rounded-3xl border border-amber-200 bg-[linear-gradient(115deg,_#fff4e0,_#fffbf2_42%,_#e0f2fe)] p-6 shadow-sm">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-amber-700">
+                AD Electronics Records
               </p>
-            ) : null}
+              <h2 className="mt-1 text-3xl font-black text-slate-900">
+                Orders
+              </h2>
+              {phone ? (
+                <p className="mt-1 text-sm text-slate-600">
+                  Filtered for phone: {phone}
+                </p>
+              ) : (
+                <p className="mt-1 text-sm text-slate-600">
+                  Track all installment orders and payment status.
+                </p>
+              )}
+            </div>
+            <Link
+              href="/orders/add"
+              className="rounded-xl bg-[linear-gradient(135deg,_#f59e0b,_#d97706)] px-4 py-2 text-sm font-semibold text-white transition hover:brightness-110"
+            >
+              Add New Order
+            </Link>
           </div>
-          <Link
-            href="/orders/add"
-            className="rounded-full bg-amber-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-amber-600"
-          >
-            Add New Order
-          </Link>
         </div>
 
         <div className="flex flex-wrap gap-2">
@@ -69,7 +82,7 @@ export default function OrdersPage({ orders, filter, phone }) {
               key={option.key}
               type="button"
               onClick={() => setFilter(option.key)}
-              className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
+              className={`rounded-xl px-4 py-2 text-sm font-semibold transition ${
                 filter === option.key
                   ? "bg-slate-900 text-white"
                   : "bg-white text-slate-700 ring-1 ring-slate-300 hover:bg-slate-50"
@@ -82,7 +95,7 @@ export default function OrdersPage({ orders, filter, phone }) {
 
         <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm">
           <table className="min-w-full divide-y divide-slate-200 text-sm">
-            <thead className="bg-slate-50 text-left text-slate-700">
+            <thead className="bg-slate-50 text-left text-[11px] uppercase tracking-wide text-slate-600">
               <tr>
                 <th className="px-4 py-3 font-semibold">Customer Name</th>
                 <th className="px-4 py-3 font-semibold">Phone</th>
@@ -108,7 +121,7 @@ export default function OrdersPage({ orders, filter, phone }) {
                 </tr>
               ) : (
                 orders.map((order) => (
-                  <tr key={order.id}>
+                  <tr key={order.id} className="hover:bg-amber-50/30">
                     <td className="px-4 py-3 font-medium text-slate-900">
                       {order.customer_name}
                     </td>
@@ -118,7 +131,7 @@ export default function OrdersPage({ orders, filter, phone }) {
                     <td className="px-4 py-3">
                       {currency(order.advance_payment)}
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3 font-semibold text-slate-900">
                       {currency(order.remaining_balance)}
                     </td>
                     <td className="px-4 py-3">
@@ -171,7 +184,7 @@ export default function OrdersPage({ orders, filter, phone }) {
 
 export const getServerSideProps = withPageAuth(
   async function getServerSideProps(context) {
-    const filter = String(context.query.filter || "all");
+    const filter = String(context.query.filter || "pending");
     const phone = String(context.query.phone || "").trim();
 
     let sql = `

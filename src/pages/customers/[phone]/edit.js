@@ -1,16 +1,17 @@
+import { query } from "@/lib/db";
 import { withPageAuth } from "@/lib/session";
 import Head from "next/head";
 import { useRouter } from "next/router";
 import { useState } from "react";
 import toast from "react-hot-toast";
 
-export default function AddCustomerPage() {
+export default function EditCustomerPage({ customer }) {
   const router = useRouter();
   const [form, setForm] = useState({
-    name: "",
-    phone: "",
-    address: "",
-    id_card_no: "",
+    name: customer.name || "",
+    phone: customer.phone || "",
+    address: customer.address || "",
+    id_card_no: customer.id_card_no || "",
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -31,24 +32,27 @@ export default function AddCustomerPage() {
     setIsSubmitting(true);
 
     try {
-      const response = await fetch("/api/customers", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
+      const response = await fetch(
+        `/api/customers/${encodeURIComponent(customer.phone)}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(form),
         },
-        body: JSON.stringify(form),
-      });
+      );
 
       const payload = await response.json();
 
       if (!response.ok) {
-        throw new Error(payload.message || "Failed to create customer");
+        throw new Error(payload.message || "Failed to update customer");
       }
 
-      toast.success("Customer created");
+      toast.success("Customer updated");
       await router.push("/customers");
     } catch (error) {
-      toast.error(error.message || "Could not save customer");
+      toast.error(error.message || "Could not update customer");
     } finally {
       setIsSubmitting(false);
     }
@@ -57,11 +61,11 @@ export default function AddCustomerPage() {
   return (
     <>
       <Head>
-        <title>Add Customer | AD Electronics</title>
+        <title>Edit Customer | AD Electronics</title>
       </Head>
 
       <section className="mx-auto w-full max-w-2xl space-y-5 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-        <h2 className="text-2xl font-bold text-slate-900">Add Customer</h2>
+        <h2 className="text-2xl font-bold text-slate-900">Edit Customer</h2>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
@@ -145,7 +149,7 @@ export default function AddCustomerPage() {
               disabled={isSubmitting}
               className="rounded-xl bg-amber-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-amber-600 disabled:cursor-not-allowed disabled:opacity-70"
             >
-              {isSubmitting ? "Saving..." : "Save Customer"}
+              {isSubmitting ? "Saving..." : "Update Customer"}
             </button>
           </div>
         </form>
@@ -154,4 +158,23 @@ export default function AddCustomerPage() {
   );
 }
 
-export const getServerSideProps = withPageAuth();
+export const getServerSideProps = withPageAuth(
+  async function getServerSideProps(context) {
+    const phone = String(context.params.phone || "").trim();
+
+    const rows = await query(
+      "SELECT phone, name, address, id_card_no FROM customers WHERE phone = ? LIMIT 1",
+      [phone],
+    );
+
+    if (rows.length === 0) {
+      return { notFound: true };
+    }
+
+    return {
+      props: {
+        customer: JSON.parse(JSON.stringify(rows[0])),
+      },
+    };
+  },
+);

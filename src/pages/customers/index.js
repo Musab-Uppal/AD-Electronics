@@ -24,7 +24,7 @@ export default function CustomersPage({ customers, initialQuery }) {
   return (
     <>
       <Head>
-        <title>Customers | Installment Desk</title>
+        <title>Customers | AD Electronics</title>
       </Head>
 
       <section className="space-y-5">
@@ -85,12 +85,20 @@ export default function CustomersPage({ customers, initialQuery }) {
                     <td className="px-4 py-3">{customer.address || "-"}</td>
                     <td className="px-4 py-3">{customer.id_card_no || "-"}</td>
                     <td className="px-4 py-3">
-                      <Link
-                        href={`/orders?phone=${encodeURIComponent(customer.phone)}`}
-                        className="font-semibold text-amber-700 hover:text-amber-900"
-                      >
-                        View Orders
-                      </Link>
+                      <div className="flex items-center gap-3">
+                        <Link
+                          href={`/customers/${encodeURIComponent(customer.phone)}/edit`}
+                          className="font-semibold text-slate-700 hover:text-slate-900"
+                        >
+                          Edit
+                        </Link>
+                        <Link
+                          href={`/orders?phone=${encodeURIComponent(customer.phone)}`}
+                          className="font-semibold text-amber-700 hover:text-amber-900"
+                        >
+                          View Orders
+                        </Link>
+                      </div>
                     </td>
                   </tr>
                 ))

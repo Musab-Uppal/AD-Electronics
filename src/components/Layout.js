@@ -47,14 +47,14 @@ export default function Layout({ children }) {
   }
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,_#fff8e7,_#f8fafc_45%,_#fef3c7)] text-slate-900">
-      <header className="border-b border-amber-200/70 bg-white/80 backdrop-blur">
-        <div className="mx-auto flex w-full max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-4 sm:px-6 lg:px-8">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-amber-700">
-              Installment Desk
+    <div className="min-h-screen text-slate-900">
+      <header className="sticky top-0 z-40 border-b border-amber-200/70 bg-white/75 backdrop-blur-xl">
+        <div className="mx-auto flex w-full max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-6 lg:px-8">
+          <div className="relative overflow-hidden rounded-2xl border border-amber-200 bg-[linear-gradient(120deg,_#fff4e0_0%,_#ffffff_70%)] px-4 py-2 shadow-sm">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-amber-700">
+              AD Electronics
             </p>
-            <h1 className="text-lg font-bold text-slate-900">
+            <h1 className="text-lg font-black text-slate-900">
               Order Management
             </h1>
           </div>
@@ -66,9 +66,9 @@ export default function Layout({ children }) {
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
+                  className={`rounded-xl px-4 py-2 text-sm font-semibold transition ${
                     active
-                      ? "bg-amber-500 text-white shadow-sm"
+                      ? "bg-[linear-gradient(135deg,_#f59e0b,_#d97706)] text-white shadow-sm"
                       : "bg-white text-slate-700 ring-1 ring-slate-200 hover:bg-amber-50"
                   }`}
                 >
@@ -81,7 +81,7 @@ export default function Layout({ children }) {
               type="button"
               onClick={handleLogout}
               disabled={isLoggingOut}
-              className="rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-70"
+              className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-70"
             >
               {isLoggingOut ? "Logging out..." : "Logout"}
             </button>
@@ -89,7 +89,7 @@ export default function Layout({ children }) {
         </div>
       </header>
 
-      <main className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+      <main className="mx-auto w-full max-w-7xl px-4 py-7 sm:px-6 lg:px-8">
         {children}
       </main>
     </div>

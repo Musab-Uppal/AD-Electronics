@@ -1,4 +1,4 @@
-# Installment and Order Management System
+# AD Electronics Installment and Order Management System
 
 Full-stack Next.js (Pages Router) application for small business installment/order tracking.
 
@@ -19,6 +19,7 @@ Full-stack Next.js (Pages Router) application for small business installment/ord
 - Customer management:
   - List + search by name/phone
   - Add customer
+  - Edit customer details
 - Order management:
   - List + filter (all/pending/complete)
   - Add order
@@ -31,6 +32,7 @@ Create/update `.env.local`:
 
 ```env
 DB_HOST=localhost
+DB_PORT=3306
 DB_USER=your_db_user
 DB_PASSWORD=your_db_password
 DB_NAME=your_db_name
@@ -47,6 +49,7 @@ On first run, `src/lib/db.js` automatically creates:
 
 - `customers`
 - `orders`
+- `order_payments` (stores each advance/installment payment event with timestamp)
 
 using `CREATE TABLE IF NOT EXISTS` queries.
 

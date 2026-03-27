@@ -46,13 +46,13 @@ export default function LoginPage() {
   return (
     <>
       <Head>
-        <title>Login | Installment Desk</title>
+        <title>Login | AD Electronics</title>
       </Head>
 
       <main className="flex min-h-screen items-center justify-center bg-[conic-gradient(at_top,_#fde68a,_#fffbeb,_#e2e8f0)] px-4 py-12">
         <section className="w-full max-w-md rounded-3xl border border-amber-200 bg-white/90 p-8 shadow-xl backdrop-blur">
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-700">
-            Installment Desk
+            AD Electronics
           </p>
           <h1 className="mt-2 text-2xl font-bold text-slate-900">
             Admin Login

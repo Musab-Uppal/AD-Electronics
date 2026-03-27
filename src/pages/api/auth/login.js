@@ -1,4 +1,9 @@
 import { validateAdminCredentials } from "@/lib/auth";
+import {
+  getDatabaseConnectionHelpMessage,
+  isDatabaseConnectionError,
+  pingDatabase,
+} from "@/lib/db";
 import { getSession } from "@/lib/session";
 
 export default async function handler(req, res) {
@@ -24,6 +29,9 @@ export default async function handler(req, res) {
       return res.status(401).json({ message: "Invalid username or password" });
     }
 
+    // Ensure DB is reachable before issuing a logged-in session.
+    await pingDatabase();
+
     const session = await getSession(req, res);
     session.user = {
       username,
@@ -34,6 +42,12 @@ export default async function handler(req, res) {
 
     return res.status(200).json({ message: "Login successful" });
   } catch (error) {
+    if (isDatabaseConnectionError(error)) {
+      return res.status(503).json({
+        message: getDatabaseConnectionHelpMessage(),
+      });
+    }
+
     return res.status(500).json({ message: error.message || "Login failed" });
   }
 }

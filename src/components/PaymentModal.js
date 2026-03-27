@@ -1,6 +1,15 @@
 import { useState } from "react";
 import toast from "react-hot-toast";
 
+function formatRs(value) {
+  const amount = Number(value || 0).toLocaleString("en-PK", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+
+  return `Rs ${amount}`;
+}
+
 export default function PaymentModal({
   orderId,
   currentRemaining,
@@ -50,10 +59,10 @@ export default function PaymentModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 px-4">
-      <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
+      <div className="w-full max-w-md rounded-2xl border border-amber-200 bg-[linear-gradient(160deg,_#fff9ee,_#ffffff)] p-6 shadow-xl">
         <h2 className="text-xl font-bold text-slate-900">Make Payment</h2>
         <p className="mt-1 text-sm text-slate-600">
-          Current remaining balance: ${Number(currentRemaining || 0).toFixed(2)}
+          Current remaining balance: {formatRs(currentRemaining)}
         </p>
 
         <form className="mt-5 space-y-4" onSubmit={handleSubmit}>
