@@ -1,4 +1,4 @@
-import { ensureTables, getPool } from "@/lib/db";
+import { applyOrderPayment, getOrderById } from "@/lib/db";
 import { withApiAuth } from "@/lib/session";
 
 function toNumber(value, fallback = 0) {
@@ -22,62 +22,43 @@ export default withApiAuth(async function handler(req, res) {
       .json({ message: "Amount and next payment date are required" });
   }
 
-  await ensureTables();
-  const db = getPool();
-  const connection = await db.getConnection();
+  const orderId = Number(id);
+
+  if (!Number.isFinite(orderId)) {
+    return res.status(400).json({ message: "Invalid order ID" });
+  }
+
+  const order = await getOrderById(orderId);
+
+  if (!order) {
+    return res.status(404).json({ message: "Order not found" });
+  }
+
+  if (order.is_complete) {
+    return res.status(400).json({ message: "Order is already complete" });
+  }
 
   try {
-    await connection.beginTransaction();
-
-    const [rows] = await connection.query(
-      "SELECT remaining_balance, is_complete FROM orders WHERE id = ? LIMIT 1 FOR UPDATE",
-      [id],
-    );
-
-    if (rows.length === 0) {
-      await connection.rollback();
-      return res.status(404).json({ message: "Order not found" });
-    }
-
-    if (rows[0].is_complete) {
-      await connection.rollback();
-      return res.status(400).json({ message: "Order is already complete" });
-    }
-
-    const currentRemaining = Number(rows[0].remaining_balance);
-    const updatedRemaining = Number(
-      Math.max(0, currentRemaining - paymentAmount).toFixed(2),
-    );
-    const isComplete = updatedRemaining <= 0;
-
-    await connection.query(
-      `
-        UPDATE orders
-        SET remaining_balance = ?, next_payment_date = ?, is_complete = ?
-        WHERE id = ?
-      `,
-      [updatedRemaining, next_payment_date, isComplete, id],
-    );
-
-    await connection.query(
-      `
-        INSERT INTO order_payments (order_id, amount, payment_date, payment_source)
-        VALUES (?, ?, NOW(), 'installment')
-      `,
-      [id, paymentAmount],
-    );
-
-    await connection.commit();
+    const result = await applyOrderPayment({
+      id: orderId,
+      amount: paymentAmount,
+      nextPaymentDate: next_payment_date,
+    });
 
     return res.status(200).json({
       message: "Payment applied",
-      remaining_balance: updatedRemaining,
-      is_complete: isComplete,
+      remaining_balance: result.remaining_balance,
+      is_complete: result.is_complete,
     });
   } catch (error) {
-    await connection.rollback();
+    if (String(error?.message || "").includes("ORDER_ALREADY_COMPLETE")) {
+      return res.status(400).json({ message: "Order is already complete" });
+    }
+
+    if (String(error?.message || "").includes("ORDER_NOT_FOUND")) {
+      return res.status(404).json({ message: "Order not found" });
+    }
+
     throw error;
-  } finally {
-    connection.release();
   }
 });

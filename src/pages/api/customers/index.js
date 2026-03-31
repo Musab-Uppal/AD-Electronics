@@ -1,21 +1,11 @@
-import { query } from "@/lib/db";
+import { createCustomer, isUniqueViolation, listCustomers } from "@/lib/db";
 import { withApiAuth } from "@/lib/session";
 
 export default withApiAuth(async function handler(req, res) {
   if (req.method === "GET") {
     const search = String(req.query.q || "").trim();
 
-    let sql = "SELECT phone, name, address, id_card_no FROM customers";
-    const params = [];
-
-    if (search) {
-      sql += " WHERE name LIKE ? OR phone LIKE ?";
-      params.push(`%${search}%`, `%${search}%`);
-    }
-
-    sql += " ORDER BY name ASC";
-
-    const rows = await query(sql, params);
+    const rows = await listCustomers(search);
     return res.status(200).json(rows);
   }
 
@@ -27,24 +17,21 @@ export default withApiAuth(async function handler(req, res) {
     }
 
     const normalizedPhone = String(phone).trim();
-    const existing = await query(
-      "SELECT phone FROM customers WHERE phone = ?",
-      [normalizedPhone],
-    );
 
-    if (existing.length > 0) {
-      return res.status(409).json({ message: "Phone number already exists" });
+    try {
+      await createCustomer({
+        phone: normalizedPhone,
+        name: String(name).trim(),
+        address: address ? String(address).trim() : null,
+        id_card_no: id_card_no ? String(id_card_no).trim() : null,
+      });
+    } catch (error) {
+      if (isUniqueViolation(error)) {
+        return res.status(409).json({ message: "Phone number already exists" });
+      }
+
+      throw error;
     }
-
-    await query(
-      "INSERT INTO customers (phone, name, address, id_card_no) VALUES (?, ?, ?, ?)",
-      [
-        normalizedPhone,
-        String(name).trim(),
-        address ? String(address).trim() : null,
-        id_card_no ? String(id_card_no).trim() : null,
-      ],
-    );
 
     return res.status(201).json({ message: "Customer created" });
   }

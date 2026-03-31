@@ -1,4 +1,4 @@
-import { query } from "@/lib/db";
+import { listOrders } from "@/lib/db";
 import { withPageAuth } from "@/lib/session";
 import Head from "next/head";
 import Link from "next/link";
@@ -187,35 +187,7 @@ export const getServerSideProps = withPageAuth(
     const filter = String(context.query.filter || "pending");
     const phone = String(context.query.phone || "").trim();
 
-    let sql = `
-    SELECT id, customer_name, customer_phone, items, total, advance_payment,
-           remaining_balance, purchase_date, next_payment_date, is_complete
-    FROM orders
-  `;
-
-    const clauses = [];
-    const params = [];
-
-    if (filter === "pending") {
-      clauses.push("is_complete = FALSE");
-    }
-
-    if (filter === "complete") {
-      clauses.push("is_complete = TRUE");
-    }
-
-    if (phone) {
-      clauses.push("customer_phone = ?");
-      params.push(phone);
-    }
-
-    if (clauses.length > 0) {
-      sql += ` WHERE ${clauses.join(" AND ")}`;
-    }
-
-    sql += " ORDER BY purchase_date DESC, id DESC";
-
-    const orders = await query(sql, params);
+    const orders = await listOrders({ filter, phone });
 
     return {
       props: {

@@ -1,4 +1,4 @@
-import { query } from "@/lib/db";
+import { getCustomerByPhone } from "@/lib/db";
 import { withPageAuth } from "@/lib/session";
 import Head from "next/head";
 import { useRouter } from "next/router";
@@ -162,18 +162,15 @@ export const getServerSideProps = withPageAuth(
   async function getServerSideProps(context) {
     const phone = String(context.params.phone || "").trim();
 
-    const rows = await query(
-      "SELECT phone, name, address, id_card_no FROM customers WHERE phone = ? LIMIT 1",
-      [phone],
-    );
+    const customer = await getCustomerByPhone(phone);
 
-    if (rows.length === 0) {
+    if (!customer) {
       return { notFound: true };
     }
 
     return {
       props: {
-        customer: JSON.parse(JSON.stringify(rows[0])),
+        customer: JSON.parse(JSON.stringify(customer)),
       },
     };
   },

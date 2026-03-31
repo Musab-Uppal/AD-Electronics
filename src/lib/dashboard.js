@@ -1,4 +1,9 @@
-import { query } from "@/lib/db";
+import {
+  countUpcomingOrdersInRange,
+  getOutstandingTotal,
+  listOverdueOrders,
+  listUpcomingOrders,
+} from "@/lib/db";
 
 function formatDate(value) {
   if (!value) {
@@ -36,49 +41,13 @@ export async function getDashboardData() {
   const today = new Date().toISOString().slice(0, 10);
   const weekEnd = getWeekEndDate();
 
-  const overdueRaw = await query(
-    `
-      SELECT id, customer_name, customer_phone, items, remaining_balance, next_payment_date
-      FROM orders
-      WHERE is_complete = FALSE
-      AND next_payment_date IS NOT NULL
-      AND next_payment_date < ?
-      ORDER BY next_payment_date ASC
-    `,
-    [today],
-  );
-
-  const upcomingRaw = await query(
-    `
-      SELECT id, customer_name, customer_phone, items, remaining_balance, next_payment_date
-      FROM orders
-      WHERE is_complete = FALSE
-      AND next_payment_date IS NOT NULL
-      AND next_payment_date >= ?
-      ORDER BY next_payment_date ASC
-    `,
-    [today],
-  );
-
-  const outstandingResult = await query(
-    `
-      SELECT COALESCE(SUM(remaining_balance), 0) AS total_outstanding
-      FROM orders
-      WHERE is_complete = FALSE
-    `,
-  );
-
-  const upcomingThisWeekResult = await query(
-    `
-      SELECT COUNT(*) AS count
-      FROM orders
-      WHERE is_complete = FALSE
-      AND next_payment_date IS NOT NULL
-      AND next_payment_date >= ?
-      AND next_payment_date <= ?
-    `,
-    [today, weekEnd],
-  );
+  const [overdueRaw, upcomingRaw, totalOutstanding, upcomingThisWeekCount] =
+    await Promise.all([
+      listOverdueOrders(today),
+      listUpcomingOrders(today),
+      getOutstandingTotal(),
+      countUpcomingOrdersInRange(today, weekEnd),
+    ]);
 
   const overdue = overdueRaw.map((order) => ({
     ...order,
@@ -95,9 +64,9 @@ export async function getDashboardData() {
     overdue,
     upcoming,
     stats: {
-      totalOutstanding: Number(outstandingResult[0]?.total_outstanding || 0),
+      totalOutstanding: Number(totalOutstanding || 0),
       overdueCount: overdue.length,
-      upcomingThisWeekCount: Number(upcomingThisWeekResult[0]?.count || 0),
+      upcomingThisWeekCount: Number(upcomingThisWeekCount || 0),
     },
   };
 }

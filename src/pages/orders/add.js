@@ -1,4 +1,4 @@
-import { query } from "@/lib/db";
+import { listCustomerOptions } from "@/lib/db";
 import { withPageAuth } from "@/lib/session";
 import Head from "next/head";
 import { useMemo, useState } from "react";
@@ -404,9 +404,7 @@ export default function AddOrderPage({ customers }) {
 
 export const getServerSideProps = withPageAuth(
   async function getServerSideProps() {
-    const customers = await query(
-      "SELECT phone, name FROM customers ORDER BY name ASC",
-    );
+    const customers = await listCustomerOptions();
 
     return {
       props: {

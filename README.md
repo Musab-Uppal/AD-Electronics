@@ -5,8 +5,8 @@ Full-stack Next.js (Pages Router) application for small business installment/ord
 ## Tech Stack
 
 - Next.js Pages Router
-- MySQL via `mysql2/promise` (raw SQL, no ORM)
-- Session auth via `iron-session`
+- Supabase (PostgreSQL + Supabase JS client)
+- Session auth via iron-session
 - Tailwind CSS
 
 ## Features
@@ -28,30 +28,36 @@ Full-stack Next.js (Pages Router) application for small business installment/ord
 
 ## Required Environment Variables
 
-Create/update `.env.local`:
+Create or update .env.local:
 
 ```env
-DB_HOST=localhost
-DB_PORT=3306
-DB_USER=your_db_user
-DB_PASSWORD=your_db_password
-DB_NAME=your_db_name
-SESSION_SECRET=a_long_random_secret_string_32chars
+SUPABASE_URL=https://YOUR_PROJECT_REF.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=YOUR_SUPABASE_SERVICE_ROLE_KEY
+SESSION_SECRET=replace_with_long_random_string_32_chars_min
 ADMIN_USERNAME=admin
-ADMIN_PASSWORD=admin123
+ADMIN_PASSWORD=change_me
 ```
 
-## Database Initialization
+Notes:
 
-No migration package is used.
+- The app can also read SUPABASE_PROJECT_URL as a fallback alias for SUPABASE_URL.
+- Never expose SUPABASE_SERVICE_ROLE_KEY in client-side code.
 
-On first run, `src/lib/db.js` automatically creates:
+## Database Setup (Supabase)
 
-- `customers`
-- `orders`
-- `order_payments` (stores each advance/installment payment event with timestamp)
+1. Open your Supabase dashboard.
+2. Go to SQL Editor.
+3. Run the SQL script in supabase/schema.sql.
 
-using `CREATE TABLE IF NOT EXISTS` queries.
+This creates:
+
+- customers
+- orders
+- order_payments
+- helper SQL functions used by API routes:
+  - update_customer_and_orders
+  - create_order_with_advance
+  - apply_order_payment
 
 ## Local Development
 
@@ -69,41 +75,36 @@ npm run dev
 
 3. Open:
 
-`http://localhost:3000`
+http://localhost:3000
 
 ## API Routes
 
-- `POST /api/auth/login`
-- `POST /api/auth/logout`
-- `GET, POST /api/customers`
-- `GET /api/customers/[phone]`
-- `GET, POST /api/orders`
-- `GET /api/orders/[id]`
-- `POST /api/orders/[id]/payment`
-- `GET /api/dashboard`
+- POST /api/auth/login
+- POST /api/auth/logout
+- GET, POST /api/customers
+- GET, PUT /api/customers/[phone]
+- GET, POST /api/orders
+- GET /api/orders/[id]
+- POST /api/orders/[id]/payment
+- GET /api/dashboard
 
-All protected API routes enforce authentication and return `401` when unauthenticated.
+All protected API routes enforce authentication and return 401 when unauthenticated.
 
 ## cPanel Deployment (Node.js App)
 
-This project includes a custom Node entry file: `server.js`.
+This project includes a custom Node entry file: server.js.
 
 1. Upload project to cPanel file manager or via Git.
-
-2. In cPanel, open **Setup Node.js App**:
-   - Create/select Node.js app
-   - Set application root to this project folder
-   - Set startup file to `server.js`
-
-3. Set environment variables in cPanel (same keys as `.env.local`):
-   - `DB_HOST`
-   - `DB_USER`
-   - `DB_PASSWORD`
-   - `DB_NAME`
-   - `SESSION_SECRET`
-   - `ADMIN_USERNAME`
-   - `ADMIN_PASSWORD`
-
+2. In cPanel, open Setup Node.js App:
+   - Create/select Node.js app.
+   - Set application root to this project folder.
+   - Set startup file to server.js.
+3. Set environment variables in cPanel:
+   - SUPABASE_URL
+   - SUPABASE_SERVICE_ROLE_KEY
+   - SESSION_SECRET
+   - ADMIN_USERNAME
+   - ADMIN_PASSWORD
 4. Open cPanel terminal in the project folder and run:
 
 ```bash
@@ -112,15 +113,11 @@ npm run build
 ```
 
 5. Restart the Node.js app from cPanel.
-
 6. Visit your domain.
-
-### Optional Apache Proxy
-
-An optional `.htaccess` is included for hosts that require Apache reverse proxy forwarding to the Node app port. Use it only if your hosting provider requires that setup.
 
 ## Production Notes
 
-- Keep `SESSION_SECRET` at least 32 characters.
-- Use a strong `ADMIN_PASSWORD`.
+- Keep SESSION_SECRET at least 32 characters.
+- Use a strong ADMIN_PASSWORD.
 - Use HTTPS in production so secure cookies are transmitted safely.
+- Keep SUPABASE_SERVICE_ROLE_KEY server-side only.

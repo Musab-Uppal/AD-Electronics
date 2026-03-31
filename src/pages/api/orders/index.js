@@ -1,4 +1,8 @@
-import { ensureTables, getPool, query } from "@/lib/db";
+import {
+  createOrderWithAdvance,
+  getCustomerByPhone,
+  listOrders,
+} from "@/lib/db";
 import { withApiAuth } from "@/lib/session";
 
 function formatDate(value) {
@@ -23,35 +27,7 @@ export default withApiAuth(async function handler(req, res) {
     const filter = String(req.query.filter || "all");
     const phone = String(req.query.phone || "").trim();
 
-    let sql = `
-      SELECT id, customer_name, customer_phone, items, total, advance_payment, remaining_balance,
-             purchase_date, next_payment_date, is_complete
-      FROM orders
-    `;
-
-    const clauses = [];
-    const params = [];
-
-    if (filter === "pending") {
-      clauses.push("is_complete = FALSE");
-    }
-
-    if (filter === "complete") {
-      clauses.push("is_complete = TRUE");
-    }
-
-    if (phone) {
-      clauses.push("customer_phone = ?");
-      params.push(phone);
-    }
-
-    if (clauses.length > 0) {
-      sql += ` WHERE ${clauses.join(" AND ")}`;
-    }
-
-    sql += " ORDER BY purchase_date DESC, id DESC";
-
-    const rows = await query(sql, params);
+    const rows = await listOrders({ filter, phone });
 
     return res.status(200).json(
       rows.map((order) => ({
@@ -83,12 +59,9 @@ export default withApiAuth(async function handler(req, res) {
       return res.status(400).json({ message: "Missing required order fields" });
     }
 
-    const customerRows = await query(
-      "SELECT name, phone FROM customers WHERE phone = ?",
-      [customer_phone],
-    );
+    const customer = await getCustomerByPhone(String(customer_phone).trim());
 
-    if (customerRows.length === 0) {
+    if (!customer) {
       return res
         .status(400)
         .json({ message: "Selected customer does not exist" });
@@ -102,55 +75,15 @@ export default withApiAuth(async function handler(req, res) {
     const completeFromBalance = calculatedRemaining <= 0;
     const finalIsComplete = parseBoolean(is_complete) || completeFromBalance;
 
-    await ensureTables();
-    const db = getPool();
-    const connection = await db.getConnection();
-
-    let insertId;
-
-    try {
-      await connection.beginTransaction();
-
-      const [insertResult] = await connection.query(
-        `
-          INSERT INTO orders (
-            customer_phone, customer_name, items, total, advance_payment,
-            remaining_balance, purchase_date, next_payment_date, is_complete
-          )
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `,
-        [
-          customerRows[0].phone,
-          customerRows[0].name,
-          String(items).trim(),
-          totalNumber,
-          advanceNumber,
-          calculatedRemaining,
-          purchase_date,
-          next_payment_date || null,
-          finalIsComplete,
-        ],
-      );
-
-      insertId = insertResult.insertId;
-
-      if (advanceNumber > 0) {
-        await connection.query(
-          `
-            INSERT INTO order_payments (order_id, amount, payment_date, payment_source)
-            VALUES (?, ?, ?, 'advance')
-          `,
-          [insertId, advanceNumber, purchase_date],
-        );
-      }
-
-      await connection.commit();
-    } catch (error) {
-      await connection.rollback();
-      throw error;
-    } finally {
-      connection.release();
-    }
+    const insertId = await createOrderWithAdvance({
+      customerPhone: customer.phone,
+      items: String(items).trim(),
+      total: totalNumber,
+      advancePayment: advanceNumber,
+      purchaseDate: purchase_date,
+      nextPaymentDate: next_payment_date || null,
+      isComplete: finalIsComplete,
+    });
 
     return res.status(201).json({
       message: "Order created",

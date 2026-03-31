@@ -1,5 +1,5 @@
 import PaymentModal from "@/components/PaymentModal";
-import { query } from "@/lib/db";
+import { getOrderById, listOrderPayments } from "@/lib/db";
 import { withPageAuth } from "@/lib/session";
 import Head from "next/head";
 import Link from "next/link";
@@ -232,36 +232,24 @@ export default function OrderDetailsPage({ order, payments }) {
 export const getServerSideProps = withPageAuth(
   async function getServerSideProps(context) {
     const { id } = context.params;
+    const orderId = Number(id);
 
-    const [rows, payments] = await Promise.all([
-      query(
-        `
-        SELECT id, customer_name, customer_phone, items, total, advance_payment, remaining_balance,
-               purchase_date, next_payment_date, is_complete
-        FROM orders
-        WHERE id = ?
-        LIMIT 1
-      `,
-        [id],
-      ),
-      query(
-        `
-        SELECT id, amount, payment_date, payment_source
-        FROM order_payments
-        WHERE order_id = ?
-        ORDER BY payment_date ASC, id ASC
-      `,
-        [id],
-      ),
+    if (!Number.isFinite(orderId)) {
+      return { notFound: true };
+    }
+
+    const [order, payments] = await Promise.all([
+      getOrderById(orderId),
+      listOrderPayments(orderId),
     ]);
 
-    if (rows.length === 0) {
+    if (!order) {
       return { notFound: true };
     }
 
     return {
       props: {
-        order: JSON.parse(JSON.stringify(rows[0])),
+        order: JSON.parse(JSON.stringify(order)),
         payments: JSON.parse(JSON.stringify(payments)),
       },
     };

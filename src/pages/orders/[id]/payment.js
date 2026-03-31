@@ -1,4 +1,4 @@
-import { query } from "@/lib/db";
+import { getOrderById } from "@/lib/db";
 import { withPageAuth } from "@/lib/session";
 import Head from "next/head";
 import Link from "next/link";
@@ -152,18 +152,20 @@ export const getServerSideProps = withPageAuth(
   async function getServerSideProps(context) {
     const { id } = context.params;
 
-    const rows = await query(
-      "SELECT id, customer_name, remaining_balance, next_payment_date, is_complete FROM orders WHERE id = ? LIMIT 1",
-      [id],
-    );
+    const orderId = Number(id);
+    if (!Number.isFinite(orderId)) {
+      return { notFound: true };
+    }
 
-    if (rows.length === 0) {
+    const order = await getOrderById(orderId);
+
+    if (!order) {
       return { notFound: true };
     }
 
     return {
       props: {
-        order: JSON.parse(JSON.stringify(rows[0])),
+        order: JSON.parse(JSON.stringify(order)),
       },
     };
   },

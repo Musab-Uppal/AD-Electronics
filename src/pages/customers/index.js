@@ -1,4 +1,4 @@
-import { query } from "@/lib/db";
+import { listCustomers } from "@/lib/db";
 import { withPageAuth } from "@/lib/session";
 import Head from "next/head";
 import Link from "next/link";
@@ -114,18 +114,7 @@ export default function CustomersPage({ customers, initialQuery }) {
 export const getServerSideProps = withPageAuth(
   async function getServerSideProps(context) {
     const search = String(context.query.q || "").trim();
-
-    let sql = "SELECT phone, name, address, id_card_no FROM customers";
-    const params = [];
-
-    if (search) {
-      sql += " WHERE name LIKE ? OR phone LIKE ?";
-      params.push(`%${search}%`, `%${search}%`);
-    }
-
-    sql += " ORDER BY name ASC";
-
-    const customers = await query(sql, params);
+    const customers = await listCustomers(search);
 
     return {
       props: {

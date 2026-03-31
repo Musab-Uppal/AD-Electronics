@@ -1,4 +1,4 @@
-import { query } from "@/lib/db";
+import { getOrderById, listOrderPayments } from "@/lib/db";
 import { withApiAuth } from "@/lib/session";
 
 function formatDate(value) {
@@ -23,36 +23,25 @@ export default withApiAuth(async function handler(req, res) {
   }
 
   const { id } = req.query;
-  const [rows, payments] = await Promise.all([
-    query(
-      `
-        SELECT id, customer_name, customer_phone, items, total, advance_payment, remaining_balance,
-               purchase_date, next_payment_date, is_complete
-        FROM orders
-        WHERE id = ?
-        LIMIT 1
-      `,
-      [id],
-    ),
-    query(
-      `
-        SELECT id, amount, payment_date, payment_source
-        FROM order_payments
-        WHERE order_id = ?
-        ORDER BY payment_date ASC, id ASC
-      `,
-      [id],
-    ),
+  const orderId = Number(id);
+
+  if (!Number.isFinite(orderId)) {
+    return res.status(400).json({ message: "Invalid order ID" });
+  }
+
+  const [order, payments] = await Promise.all([
+    getOrderById(orderId),
+    listOrderPayments(orderId),
   ]);
 
-  if (rows.length === 0) {
+  if (!order) {
     return res.status(404).json({ message: "Order not found" });
   }
 
   return res.status(200).json({
-    ...rows[0],
-    purchase_date: formatDate(rows[0].purchase_date),
-    next_payment_date: formatDate(rows[0].next_payment_date),
+    ...order,
+    purchase_date: formatDate(order.purchase_date),
+    next_payment_date: formatDate(order.next_payment_date),
     payments: payments.map((payment) => ({
       ...payment,
       payment_date: formatDateTime(payment.payment_date),
