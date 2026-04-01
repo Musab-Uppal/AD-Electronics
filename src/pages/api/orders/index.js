@@ -41,6 +41,7 @@ export default withApiAuth(async function handler(req, res) {
   if (req.method === "POST") {
     const {
       customer_phone,
+      overall_time,
       items,
       total,
       advance_payment,
@@ -69,6 +70,17 @@ export default withApiAuth(async function handler(req, res) {
 
     const totalNumber = toNumber(total);
     const advanceNumber = toNumber(advance_payment, 0);
+    const normalizedOverallTime =
+      overall_time === undefined || overall_time === null || overall_time === ""
+        ? null
+        : Math.floor(toNumber(overall_time, -1));
+
+    if (normalizedOverallTime !== null && normalizedOverallTime <= 0) {
+      return res.status(400).json({
+        message: "Overall time must be a positive integer",
+      });
+    }
+
     const calculatedRemaining = Number(
       (totalNumber - advanceNumber).toFixed(2),
     );
@@ -77,6 +89,7 @@ export default withApiAuth(async function handler(req, res) {
 
     const insertId = await createOrderWithAdvance({
       customerPhone: customer.phone,
+      overallTime: normalizedOverallTime,
       items: String(items).trim(),
       total: totalNumber,
       advancePayment: advanceNumber,

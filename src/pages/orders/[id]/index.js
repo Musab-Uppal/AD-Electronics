@@ -52,7 +52,7 @@ export default function OrderDetailsPage({ order, payments }) {
         <title>Order #{order.id} | AD Electronics</title>
       </Head>
 
-      <section className="mx-auto w-full max-w-3xl space-y-5 rounded-3xl border border-amber-200 bg-[linear-gradient(150deg,_#fff8eb,_#ffffff)] p-6 shadow-sm">
+      <section className="mx-auto w-full max-w-3xl space-y-5 rounded-3xl border border-amber-200 bg-[linear-gradient(150deg,#fff8eb,#ffffff)] p-6 shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 className="text-2xl font-bold text-slate-900">
             Order #{order.id}
@@ -68,7 +68,7 @@ export default function OrderDetailsPage({ order, payments }) {
               <button
                 type="button"
                 onClick={() => setOpenPaymentModal(true)}
-                className="rounded-xl bg-[linear-gradient(135deg,_#f59e0b,_#d97706)] px-4 py-2 text-sm font-semibold text-white transition hover:brightness-110"
+                className="rounded-xl bg-[linear-gradient(135deg,#f59e0b,#d97706)] px-4 py-2 text-sm font-semibold text-white transition hover:brightness-110"
               >
                 Make Payment
               </button>
@@ -91,6 +91,14 @@ export default function OrderDetailsPage({ order, payments }) {
             </p>
             <p className="mt-1 font-semibold text-slate-900">
               {order.customer_phone}
+            </p>
+          </article>
+          <article className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+            <p className="text-xs uppercase tracking-wide text-slate-500">
+              Overall Time
+            </p>
+            <p className="mt-1 font-semibold text-slate-900">
+              {order.overall_time ? `${order.overall_time} months` : "-"}
             </p>
           </article>
           <article className="rounded-xl border border-slate-200 bg-slate-50 p-4 sm:col-span-2">

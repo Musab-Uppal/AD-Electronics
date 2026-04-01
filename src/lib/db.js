@@ -12,6 +12,9 @@ const DB_CONNECTION_ERROR_CODES = new Set([
 ]);
 
 const ORDER_SELECT_FIELDS =
+  "id, customer_name, customer_phone, overall_time, items, total, advance_payment, remaining_balance, purchase_date, next_payment_date, is_complete";
+
+const ORDER_SELECT_FIELDS_LEGACY =
   "id, customer_name, customer_phone, items, total, advance_payment, remaining_balance, purchase_date, next_payment_date, is_complete";
 
 function getRequiredEnv(name, aliases = []) {
@@ -44,6 +47,57 @@ function throwIfSupabaseError(error, fallbackMessage) {
   if (error) {
     throw normalizeDatabaseError(error, fallbackMessage);
   }
+}
+
+function combinedErrorMessage(error) {
+  return `${error?.message || ""} ${error?.cause?.message || ""}`
+    .toLowerCase()
+    .trim();
+}
+
+function isMissingOrdersColumnError(error, columnName) {
+  const code = error?.code || error?.cause?.code;
+  const message = combinedErrorMessage(error);
+
+  return (
+    code === "42703" &&
+    message.includes("orders") &&
+    message.includes(String(columnName || "").toLowerCase())
+  );
+}
+
+function shouldFallbackToLegacyOrderSelect(error) {
+  return isMissingOrdersColumnError(error, "overall_time");
+}
+
+function normalizeOverallTime(value) {
+  if (value === null || value === undefined || value === "") {
+    return null;
+  }
+
+  const numeric = Number(value);
+  return Number.isFinite(numeric) ? numeric : null;
+}
+
+function normalizeOrderRecord(record) {
+  return {
+    ...record,
+    overall_time: normalizeOverallTime(record?.overall_time),
+  };
+}
+
+function normalizeOrderRecords(records) {
+  return (records || []).map(normalizeOrderRecord);
+}
+
+function isCreateOrderRpcSignatureMismatch(error) {
+  const message = combinedErrorMessage(error);
+
+  return (
+    message.includes("create_order_with_advance") &&
+    (message.includes("p_overall_time") ||
+      message.includes("could not find the function"))
+  );
 }
 
 export function getSupabaseAdmin() {
@@ -172,52 +226,74 @@ export async function updateCustomerAndOrders({
 
 export async function listOrders({ filter = "all", phone = "" } = {}) {
   const supabase = getSupabaseAdmin();
-  let builder = supabase
-    .from("orders")
-    .select(ORDER_SELECT_FIELDS)
-    .order("purchase_date", { ascending: false })
-    .order("id", { ascending: false });
 
-  if (filter === "pending") {
-    builder = builder.eq("is_complete", false);
+  const buildQuery = (selectFields) => {
+    let builder = supabase
+      .from("orders")
+      .select(selectFields)
+      .order("purchase_date", { ascending: false })
+      .order("id", { ascending: false });
+
+    if (filter === "pending") {
+      builder = builder.eq("is_complete", false);
+    }
+
+    if (filter === "complete") {
+      builder = builder.eq("is_complete", true);
+    }
+
+    if (phone) {
+      builder = builder.eq("customer_phone", phone);
+    }
+
+    return builder;
+  };
+
+  let { data, error } = await buildQuery(ORDER_SELECT_FIELDS);
+
+  if (shouldFallbackToLegacyOrderSelect(error)) {
+    ({ data, error } = await buildQuery(ORDER_SELECT_FIELDS_LEGACY));
   }
 
-  if (filter === "complete") {
-    builder = builder.eq("is_complete", true);
-  }
-
-  if (phone) {
-    builder = builder.eq("customer_phone", phone);
-  }
-
-  const { data, error } = await builder;
   throwIfSupabaseError(error, "Failed to load orders");
-  return data || [];
+  return normalizeOrderRecords(data);
 }
 
 export async function listOrdersByCustomerPhone(phone) {
   const supabase = getSupabaseAdmin();
-  const { data, error } = await supabase
-    .from("orders")
-    .select(ORDER_SELECT_FIELDS)
-    .eq("customer_phone", phone)
-    .order("purchase_date", { ascending: false })
-    .order("id", { ascending: false });
+
+  const buildQuery = (selectFields) =>
+    supabase
+      .from("orders")
+      .select(selectFields)
+      .eq("customer_phone", phone)
+      .order("purchase_date", { ascending: false })
+      .order("id", { ascending: false });
+
+  let { data, error } = await buildQuery(ORDER_SELECT_FIELDS);
+
+  if (shouldFallbackToLegacyOrderSelect(error)) {
+    ({ data, error } = await buildQuery(ORDER_SELECT_FIELDS_LEGACY));
+  }
 
   throwIfSupabaseError(error, "Failed to load customer orders");
-  return data || [];
+  return normalizeOrderRecords(data);
 }
 
 export async function getOrderById(id) {
   const supabase = getSupabaseAdmin();
-  const { data, error } = await supabase
-    .from("orders")
-    .select(ORDER_SELECT_FIELDS)
-    .eq("id", id)
-    .maybeSingle();
+
+  const buildQuery = (selectFields) =>
+    supabase.from("orders").select(selectFields).eq("id", id).maybeSingle();
+
+  let { data, error } = await buildQuery(ORDER_SELECT_FIELDS);
+
+  if (shouldFallbackToLegacyOrderSelect(error)) {
+    ({ data, error } = await buildQuery(ORDER_SELECT_FIELDS_LEGACY));
+  }
 
   throwIfSupabaseError(error, "Failed to load order");
-  return data || null;
+  return data ? normalizeOrderRecord(data) : null;
 }
 
 export async function listOrderPayments(orderId) {
@@ -235,6 +311,7 @@ export async function listOrderPayments(orderId) {
 
 export async function createOrderWithAdvance({
   customerPhone,
+  overallTime,
   items,
   total,
   advancePayment,
@@ -243,8 +320,9 @@ export async function createOrderWithAdvance({
   isComplete,
 }) {
   const supabase = getSupabaseAdmin();
-  const { data, error } = await supabase.rpc("create_order_with_advance", {
+  let { data, error } = await supabase.rpc("create_order_with_advance", {
     p_customer_phone: customerPhone,
+    p_overall_time: overallTime,
     p_items: items,
     p_total: total,
     p_advance_payment: advancePayment,
@@ -252,6 +330,18 @@ export async function createOrderWithAdvance({
     p_next_payment_date: nextPaymentDate,
     p_is_complete: isComplete,
   });
+
+  if (isCreateOrderRpcSignatureMismatch(error)) {
+    ({ data, error } = await supabase.rpc("create_order_with_advance", {
+      p_customer_phone: customerPhone,
+      p_items: items,
+      p_total: total,
+      p_advance_payment: advancePayment,
+      p_purchase_date: purchaseDate,
+      p_next_payment_date: nextPaymentDate,
+      p_is_complete: isComplete,
+    }));
+  }
 
   throwIfSupabaseError(error, "Failed to create order");
   return Number(data);

@@ -31,6 +31,7 @@ export default function AddOrderPage({ customers }) {
   const [search, setSearch] = useState("");
   const [form, setForm] = useState({
     customer_phone: customers[0]?.phone || "",
+    overall_time: "",
     advance_payment: "0",
     purchase_date: today(),
     next_payment_date: "",
@@ -134,6 +135,21 @@ export default function AddOrderPage({ customers }) {
       })
       .join("\n");
 
+    const overallTimeRaw = String(form.overall_time ?? "").trim();
+    const overallTimeNumber = Math.floor(Number(overallTimeRaw));
+
+    if (overallTimeRaw === "") {
+      setIsSubmitting(false);
+      toast.error("Overall time is required");
+      return;
+    }
+
+    if (!Number.isFinite(overallTimeNumber) || overallTimeNumber <= 0) {
+      setIsSubmitting(false);
+      toast.error("Overall time must be a positive integer");
+      return;
+    }
+
     try {
       const response = await fetch("/api/orders", {
         method: "POST",
@@ -142,6 +158,7 @@ export default function AddOrderPage({ customers }) {
         },
         body: JSON.stringify({
           ...form,
+          overall_time: overallTimeNumber,
           items: itemsText,
           total: calculatedTotal,
           advance_payment: Number(form.advance_payment || 0),
@@ -169,7 +186,7 @@ export default function AddOrderPage({ customers }) {
         <title>Add Order | AD Electronics</title>
       </Head>
 
-      <section className="mx-auto w-full max-w-3xl space-y-5 rounded-3xl border border-amber-200 bg-[linear-gradient(150deg,_#fff8eb,_#ffffff)] p-6 shadow-sm">
+      <section className="mx-auto w-full max-w-3xl space-y-5 rounded-3xl border border-amber-200 bg-[linear-gradient(150deg,#fff8eb,#ffffff)] p-4 shadow-sm sm:p-6">
         <h2 className="text-2xl font-bold text-slate-900">Add Order</h2>
 
         {customers.length === 0 ? (
@@ -191,7 +208,7 @@ export default function AddOrderPage({ customers }) {
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
                 placeholder="Type customer name or phone"
-                className="mb-3 w-full rounded-xl border border-slate-300 px-3 py-2 outline-none ring-amber-200 transition focus:ring"
+                className="mb-3 w-full rounded-xl border border-slate-300 px-3 py-1.5 text-sm outline-none ring-amber-200 transition focus:ring"
               />
 
               <label
@@ -207,7 +224,7 @@ export default function AddOrderPage({ customers }) {
                 onChange={(event) =>
                   updateField("customer_phone", event.target.value)
                 }
-                className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 outline-none ring-amber-200 transition focus:ring"
+                className="w-full rounded-xl border border-slate-300 bg-white px-3 py-1.5 text-sm outline-none ring-amber-200 transition focus:ring"
               >
                 {filteredCustomers.map((customer) => (
                   <option key={customer.phone} value={customer.phone}>
@@ -222,19 +239,21 @@ export default function AddOrderPage({ customers }) {
                 Items
               </label>
               <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
-                <table className="min-w-full divide-y divide-slate-200 text-sm">
+                <table className="min-w-full divide-y divide-slate-200 text-xs sm:text-sm">
                   <thead className="bg-slate-50 text-left text-[11px] uppercase tracking-wide text-slate-600">
                     <tr>
-                      <th className="px-3 py-2 font-semibold">Quantity</th>
-                      <th className="px-3 py-2 font-semibold">Name</th>
-                      <th className="px-3 py-2 font-semibold">Price (Total)</th>
-                      <th className="px-3 py-2 font-semibold">Action</th>
+                      <th className="px-2 py-1.5 font-semibold">Quantity</th>
+                      <th className="px-2 py-1.5 font-semibold">Name</th>
+                      <th className="px-2 py-1.5 font-semibold">
+                        Price (Total)
+                      </th>
+                      <th className="px-2 py-1.5 font-semibold">Action</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
                     {itemRows.map((row, index) => (
                       <tr key={`item-row-${index}`}>
-                        <td className="px-3 py-2">
+                        <td className="px-2 py-1.5">
                           <input
                             type="number"
                             min="1"
@@ -247,10 +266,10 @@ export default function AddOrderPage({ customers }) {
                                 event.target.value,
                               )
                             }
-                            className="w-24 rounded-lg border border-slate-300 px-2 py-1.5 outline-none ring-amber-200 transition focus:ring"
+                            className="w-14 rounded-lg border border-slate-300 px-1.5 py-1 text-xs outline-none ring-amber-200 transition focus:ring sm:w-20 sm:px-2 sm:text-sm"
                           />
                         </td>
-                        <td className="px-3 py-2">
+                        <td className="px-2 py-1.5">
                           <input
                             type="text"
                             value={row.name}
@@ -258,10 +277,10 @@ export default function AddOrderPage({ customers }) {
                               updateItemRow(index, "name", event.target.value)
                             }
                             placeholder="Item name"
-                            className="w-full min-w-[220px] rounded-lg border border-slate-300 px-2 py-1.5 outline-none ring-amber-200 transition focus:ring"
+                            className="w-full min-w-28 rounded-lg border border-slate-300 px-2 py-1 text-xs outline-none ring-amber-200 transition focus:ring sm:min-w-50 sm:text-sm"
                           />
                         </td>
-                        <td className="px-3 py-2">
+                        <td className="px-2 py-1.5">
                           <input
                             type="number"
                             min="0"
@@ -271,15 +290,15 @@ export default function AddOrderPage({ customers }) {
                               updateItemRow(index, "price", event.target.value)
                             }
                             placeholder="0.00"
-                            className="w-36 rounded-lg border border-slate-300 px-2 py-1.5 outline-none ring-amber-200 transition focus:ring"
+                            className="w-20 rounded-lg border border-slate-300 px-1.5 py-1 text-xs outline-none ring-amber-200 transition focus:ring sm:w-32 sm:px-2 sm:text-sm"
                           />
                         </td>
-                        <td className="px-3 py-2">
+                        <td className="px-2 py-1.5">
                           <button
                             type="button"
                             onClick={() => removeItemRow(index)}
                             disabled={itemRows.length === 1}
-                            className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                            className="rounded-lg border border-slate-300 px-1.5 py-1 text-[10px] font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 sm:px-3 sm:py-1.5 sm:text-xs"
                           >
                             Remove
                           </button>
@@ -307,6 +326,28 @@ export default function AddOrderPage({ customers }) {
               <div>
                 <label
                   className="mb-1 block text-sm font-medium text-slate-700"
+                  htmlFor="overallTime"
+                >
+                  Overall Time (months)
+                </label>
+                <input
+                  id="overallTime"
+                  required
+                  type="number"
+                  min="1"
+                  step="1"
+                  value={form.overall_time}
+                  onChange={(event) =>
+                    updateField("overall_time", event.target.value)
+                  }
+                  placeholder="e.g. 12"
+                  className="w-full rounded-xl border border-slate-300 px-3 py-1.5 text-sm outline-none ring-amber-200 transition focus:ring"
+                />
+              </div>
+
+              <div>
+                <label
+                  className="mb-1 block text-sm font-medium text-slate-700"
                   htmlFor="advancePayment"
                 >
                   Advance Payment
@@ -320,7 +361,7 @@ export default function AddOrderPage({ customers }) {
                   onChange={(event) =>
                     updateField("advance_payment", event.target.value)
                   }
-                  className="w-full rounded-xl border border-slate-300 px-3 py-2 outline-none ring-amber-200 transition focus:ring"
+                  className="w-full rounded-xl border border-slate-300 px-3 py-1.5 text-sm outline-none ring-amber-200 transition focus:ring"
                 />
               </div>
             </div>
@@ -345,7 +386,7 @@ export default function AddOrderPage({ customers }) {
                   onChange={(event) =>
                     updateField("purchase_date", event.target.value)
                   }
-                  className="w-full rounded-xl border border-slate-300 px-3 py-2 outline-none ring-amber-200 transition focus:ring"
+                  className="w-full rounded-xl border border-slate-300 px-3 py-1.5 text-sm outline-none ring-amber-200 transition focus:ring"
                 />
               </div>
 
@@ -363,7 +404,7 @@ export default function AddOrderPage({ customers }) {
                   onChange={(event) =>
                     updateField("next_payment_date", event.target.value)
                   }
-                  className="w-full rounded-xl border border-slate-300 px-3 py-2 outline-none ring-amber-200 transition focus:ring"
+                  className="w-full rounded-xl border border-slate-300 px-3 py-1.5 text-sm outline-none ring-amber-200 transition focus:ring"
                 />
               </div>
             </div>
@@ -390,7 +431,7 @@ export default function AddOrderPage({ customers }) {
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="rounded-xl bg-[linear-gradient(135deg,_#f59e0b,_#d97706)] px-4 py-2 text-sm font-semibold text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-70"
+                className="rounded-xl bg-[linear-gradient(135deg,#f59e0b,#d97706)] px-4 py-2 text-sm font-semibold text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-70"
               >
                 {isSubmitting ? "Saving..." : "Save Order"}
               </button>
