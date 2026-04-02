@@ -347,6 +347,36 @@ export async function createOrderWithAdvance({
   return Number(data);
 }
 
+export async function updateOrderById({
+  id,
+  customerPhone,
+  customerName,
+  overallTime,
+  items,
+  purchaseDate,
+  nextPaymentDate,
+  isComplete,
+}) {
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase
+    .from("orders")
+    .update({
+      customer_phone: customerPhone,
+      customer_name: customerName,
+      overall_time: overallTime,
+      items,
+      purchase_date: purchaseDate,
+      next_payment_date: nextPaymentDate,
+      is_complete: isComplete,
+    })
+    .eq("id", id)
+    .select("id")
+    .maybeSingle();
+
+  throwIfSupabaseError(error, "Failed to update order");
+  return data ? Number(data.id) : null;
+}
+
 export async function applyOrderPayment({ id, amount, nextPaymentDate }) {
   const supabase = getSupabaseAdmin();
   const { data, error } = await supabase.rpc("apply_order_payment", {

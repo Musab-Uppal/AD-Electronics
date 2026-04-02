@@ -164,6 +164,12 @@ export default function OrdersPage({ orders, filter, phone }) {
                           <span className="text-slate-400">-</span>
                         )}
                         <Link
+                          href={`/orders/${order.id}/edit`}
+                          className="font-semibold text-blue-700 hover:text-blue-900"
+                        >
+                          Edit
+                        </Link>
+                        <Link
                           href={`/orders/${order.id}`}
                           className="font-semibold text-slate-700 hover:text-slate-900"
                         >
