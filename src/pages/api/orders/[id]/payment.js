@@ -12,14 +12,16 @@ export default withApiAuth(async function handler(req, res) {
   }
 
   const { id } = req.query;
-  const { amount, next_payment_date } = req.body || {};
+  const { amount, payment_date, next_payment_date } = req.body || {};
 
   const paymentAmount = toNumber(amount, -1);
 
-  if (paymentAmount <= 0 || !next_payment_date) {
+  if (paymentAmount <= 0 || !payment_date || !next_payment_date) {
     return res
       .status(400)
-      .json({ message: "Amount and next payment date are required" });
+      .json({
+        message: "Amount, payment date, and next payment date are required",
+      });
   }
 
   const orderId = Number(id);
@@ -42,6 +44,7 @@ export default withApiAuth(async function handler(req, res) {
     const result = await applyOrderPayment({
       id: orderId,
       amount: paymentAmount,
+      paymentDate: payment_date,
       nextPaymentDate: next_payment_date,
     });
 

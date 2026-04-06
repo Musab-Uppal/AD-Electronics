@@ -26,6 +26,7 @@ function formatRs(value) {
 export default function OrderPaymentPage({ order }) {
   const router = useRouter();
   const [amount, setAmount] = useState("");
+  const [paymentDate, setPaymentDate] = useState(dateValue(new Date()));
   const [nextPaymentDate, setNextPaymentDate] = useState(
     dateValue(order.next_payment_date),
   );
@@ -48,6 +49,7 @@ export default function OrderPaymentPage({ order }) {
         },
         body: JSON.stringify({
           amount: Number(amount),
+          payment_date: paymentDate,
           next_payment_date: nextPaymentDate,
         }),
       });
@@ -73,7 +75,7 @@ export default function OrderPaymentPage({ order }) {
         <title>Payment | Order #{order.id} | AD Electronics</title>
       </Head>
 
-      <section className="mx-auto w-full max-w-xl space-y-5 rounded-3xl border border-amber-200 bg-[linear-gradient(150deg,_#fff8eb,_#ffffff)] p-6 shadow-sm">
+      <section className="mx-auto w-full max-w-xl space-y-5 rounded-3xl border border-amber-200 bg-[linear-gradient(150deg,#fff8eb,#ffffff)] p-6 shadow-sm">
         <div>
           <h2 className="text-2xl font-bold text-slate-900">Make Payment</h2>
           <p className="text-sm text-slate-600">
@@ -112,6 +114,23 @@ export default function OrderPaymentPage({ order }) {
             <div>
               <label
                 className="mb-1 block text-sm font-medium text-slate-700"
+                htmlFor="paymentDatePage"
+              >
+                Payment Date
+              </label>
+              <input
+                id="paymentDatePage"
+                type="date"
+                required
+                value={paymentDate}
+                onChange={(event) => setPaymentDate(event.target.value)}
+                className="w-full rounded-xl border border-slate-300 px-3 py-2 outline-none ring-amber-200 transition focus:ring"
+              />
+            </div>
+
+            <div>
+              <label
+                className="mb-1 block text-sm font-medium text-slate-700"
                 htmlFor="nextPaymentDatePage"
               >
                 Next Payment Date
@@ -136,7 +155,7 @@ export default function OrderPaymentPage({ order }) {
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="rounded-xl bg-[linear-gradient(135deg,_#f59e0b,_#d97706)] px-4 py-2 text-sm font-semibold text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-70"
+                className="rounded-xl bg-[linear-gradient(135deg,#f59e0b,#d97706)] px-4 py-2 text-sm font-semibold text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-70"
               >
                 {isSubmitting ? "Saving..." : "Save Payment"}
               </button>

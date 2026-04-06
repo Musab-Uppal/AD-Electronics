@@ -100,6 +100,38 @@ function isCreateOrderRpcSignatureMismatch(error) {
   );
 }
 
+function isApplyOrderPaymentRpcSignatureMismatch(error) {
+  const message = combinedErrorMessage(error);
+
+  return (
+    message.includes("apply_order_payment") &&
+    (message.includes("p_payment_date") ||
+      message.includes("could not find the function"))
+  );
+}
+
+function normalizePaymentDate(value) {
+  if (value === null || value === undefined) {
+    return null;
+  }
+
+  const raw = String(value).trim();
+  if (!raw) {
+    return null;
+  }
+
+  if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) {
+    return `${raw}T00:00:00.000Z`;
+  }
+
+  const parsed = new Date(raw);
+  if (Number.isNaN(parsed.getTime())) {
+    return null;
+  }
+
+  return parsed.toISOString();
+}
+
 export function getSupabaseAdmin() {
   if (!supabaseAdmin) {
     supabaseAdmin = createClient(
@@ -377,15 +409,60 @@ export async function updateOrderById({
   return data ? Number(data.id) : null;
 }
 
-export async function applyOrderPayment({ id, amount, nextPaymentDate }) {
+export async function applyOrderPayment({
+  id,
+  amount,
+  paymentDate,
+  nextPaymentDate,
+}) {
   const supabase = getSupabaseAdmin();
-  const { data, error } = await supabase.rpc("apply_order_payment", {
+  const normalizedPaymentDate = normalizePaymentDate(paymentDate);
+
+  let usedLegacyRpc = false;
+  let { data, error } = await supabase.rpc("apply_order_payment", {
     p_order_id: id,
     p_amount: amount,
     p_next_payment_date: nextPaymentDate,
+    p_payment_date: normalizedPaymentDate,
   });
 
+  if (isApplyOrderPaymentRpcSignatureMismatch(error)) {
+    usedLegacyRpc = true;
+    ({ data, error } = await supabase.rpc("apply_order_payment", {
+      p_order_id: id,
+      p_amount: amount,
+      p_next_payment_date: nextPaymentDate,
+    }));
+  }
+
   throwIfSupabaseError(error, "Failed to apply payment");
+
+  if (usedLegacyRpc && normalizedPaymentDate) {
+    const { data: latestPaymentRows, error: latestPaymentError } =
+      await supabase
+        .from("order_payments")
+        .select("id")
+        .eq("order_id", id)
+        .eq("payment_source", "installment")
+        .order("id", { ascending: false })
+        .limit(1);
+
+    throwIfSupabaseError(
+      latestPaymentError,
+      "Failed to locate latest installment payment",
+    );
+
+    const latestPaymentId = latestPaymentRows?.[0]?.id;
+    if (latestPaymentId) {
+      const { error: updatePaymentError } = await supabase
+        .from("order_payments")
+        .update({ payment_date: normalizedPaymentDate })
+        .eq("id", latestPaymentId);
+
+      throwIfSupabaseError(updatePaymentError, "Failed to set payment date");
+    }
+  }
+
   const result = Array.isArray(data) ? data[0] : data;
 
   return {

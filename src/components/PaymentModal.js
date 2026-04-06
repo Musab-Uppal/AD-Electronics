@@ -1,6 +1,10 @@
 import { useState } from "react";
 import toast from "react-hot-toast";
 
+function todayValue() {
+  return new Date().toISOString().slice(0, 10);
+}
+
 function formatRs(value) {
   const amount = Number(value || 0).toLocaleString("en-PK", {
     minimumFractionDigits: 2,
@@ -18,6 +22,7 @@ export default function PaymentModal({
   onSuccess,
 }) {
   const [amount, setAmount] = useState("");
+  const [paymentDate, setPaymentDate] = useState(todayValue());
   const [nextPaymentDate, setNextPaymentDate] = useState(initialDate || "");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -38,6 +43,7 @@ export default function PaymentModal({
         },
         body: JSON.stringify({
           amount: Number(amount),
+          payment_date: paymentDate,
           next_payment_date: nextPaymentDate,
         }),
       });
@@ -59,7 +65,7 @@ export default function PaymentModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 px-4">
-      <div className="w-full max-w-md rounded-2xl border border-amber-200 bg-[linear-gradient(160deg,_#fff9ee,_#ffffff)] p-6 shadow-xl">
+      <div className="w-full max-w-md rounded-2xl border border-amber-200 bg-[linear-gradient(160deg,#fff9ee,#ffffff)] p-6 shadow-xl">
         <h2 className="text-xl font-bold text-slate-900">Make Payment</h2>
         <p className="mt-1 text-sm text-slate-600">
           Current remaining balance: {formatRs(currentRemaining)}
@@ -81,6 +87,23 @@ export default function PaymentModal({
               required
               value={amount}
               onChange={(event) => setAmount(event.target.value)}
+              className="w-full rounded-lg border border-slate-300 px-3 py-2 outline-none ring-amber-200 transition focus:ring"
+            />
+          </div>
+
+          <div>
+            <label
+              className="mb-1 block text-sm font-medium text-slate-700"
+              htmlFor="paymentDate"
+            >
+              Payment Date
+            </label>
+            <input
+              id="paymentDate"
+              type="date"
+              required
+              value={paymentDate}
+              onChange={(event) => setPaymentDate(event.target.value)}
               className="w-full rounded-lg border border-slate-300 px-3 py-2 outline-none ring-amber-200 transition focus:ring"
             />
           </div>
