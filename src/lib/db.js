@@ -409,6 +409,39 @@ export async function updateOrderById({
   return data ? Number(data.id) : null;
 }
 
+export async function deleteOrderById(id) {
+  const supabase = getSupabaseAdmin();
+
+  const { data: existingOrder, error: existingOrderError } = await supabase
+    .from("orders")
+    .select("id")
+    .eq("id", id)
+    .maybeSingle();
+
+  throwIfSupabaseError(existingOrderError, "Failed to load order");
+
+  if (!existingOrder) {
+    return false;
+  }
+
+  const { error: deletePaymentsError } = await supabase
+    .from("order_payments")
+    .delete()
+    .eq("order_id", id);
+
+  throwIfSupabaseError(deletePaymentsError, "Failed to delete order payments");
+
+  const { data: deletedOrder, error: deleteOrderError } = await supabase
+    .from("orders")
+    .delete()
+    .eq("id", id)
+    .select("id")
+    .maybeSingle();
+
+  throwIfSupabaseError(deleteOrderError, "Failed to delete order");
+  return Boolean(deletedOrder?.id);
+}
+
 export async function applyOrderPayment({
   id,
   amount,

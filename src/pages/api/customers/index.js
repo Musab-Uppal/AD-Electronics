@@ -1,4 +1,9 @@
-import { createCustomer, isUniqueViolation, listCustomers } from "@/lib/db";
+import {
+  createCustomer,
+  getCustomerByPhone,
+  isUniqueViolation,
+  listCustomers,
+} from "@/lib/db";
 import { withApiAuth } from "@/lib/session";
 
 export default withApiAuth(async function handler(req, res) {
@@ -16,18 +21,33 @@ export default withApiAuth(async function handler(req, res) {
       return res.status(400).json({ message: "Name and phone are required" });
     }
 
+    const normalizedName = String(name).trim();
     const normalizedPhone = String(phone).trim();
+
+    if (!normalizedName || !normalizedPhone) {
+      return res.status(400).json({ message: "Name and phone are required" });
+    }
+
+    const existingCustomer = await getCustomerByPhone(normalizedPhone);
+
+    if (existingCustomer) {
+      return res.status(409).json({
+        message: "Customer with this phone number already exists",
+      });
+    }
 
     try {
       await createCustomer({
         phone: normalizedPhone,
-        name: String(name).trim(),
+        name: normalizedName,
         address: address ? String(address).trim() : null,
         id_card_no: id_card_no ? String(id_card_no).trim() : null,
       });
     } catch (error) {
       if (isUniqueViolation(error)) {
-        return res.status(409).json({ message: "Phone number already exists" });
+        return res.status(409).json({
+          message: "Customer with this phone number already exists",
+        });
       }
 
       throw error;

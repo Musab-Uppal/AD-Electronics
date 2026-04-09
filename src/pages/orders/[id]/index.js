@@ -5,6 +5,7 @@ import Head from "next/head";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { useState } from "react";
+import toast from "react-hot-toast";
 
 function formatDate(value) {
   if (!value) {
@@ -40,10 +41,46 @@ function currency(value) {
 export default function OrderDetailsPage({ order, payments }) {
   const router = useRouter();
   const [openPaymentModal, setOpenPaymentModal] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   function handleSuccess() {
     setOpenPaymentModal(false);
     router.replace(router.asPath);
+  }
+
+  async function handleDeleteOrder() {
+    if (isDeleting) {
+      return;
+    }
+
+    const shouldDelete = window.confirm(
+      "Are you sure you want to delete this order? This cannot be undone.",
+    );
+
+    if (!shouldDelete) {
+      return;
+    }
+
+    setIsDeleting(true);
+
+    try {
+      const response = await fetch(`/api/orders/${order.id}`, {
+        method: "DELETE",
+      });
+
+      const payload = await response.json();
+
+      if (!response.ok) {
+        throw new Error(payload.message || "Failed to delete order");
+      }
+
+      toast.success("Order deleted");
+      await router.push("/orders");
+    } catch (error) {
+      toast.error(error.message || "Could not delete order");
+    } finally {
+      setIsDeleting(false);
+    }
   }
 
   return (
@@ -70,6 +107,14 @@ export default function OrderDetailsPage({ order, payments }) {
             >
               Edit Order
             </Link>
+            <button
+              type="button"
+              disabled={isDeleting}
+              onClick={handleDeleteOrder}
+              className="rounded-xl border border-rose-300 bg-rose-50 px-4 py-2 text-sm font-semibold text-rose-700 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-70"
+            >
+              {isDeleting ? "Deleting..." : "Delete Order"}
+            </button>
             {!order.is_complete ? (
               <button
                 type="button"

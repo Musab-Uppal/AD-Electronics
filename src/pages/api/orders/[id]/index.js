@@ -1,4 +1,5 @@
 import {
+  deleteOrderById,
   getCustomerByPhone,
   getOrderById,
   listOrderPayments,
@@ -114,6 +115,16 @@ export default withApiAuth(async function handler(req, res) {
       message: "Order updated",
       id: updatedId,
     });
+  }
+
+  if (req.method === "DELETE") {
+    const deleted = await deleteOrderById(orderId);
+
+    if (!deleted) {
+      return res.status(404).json({ message: "Order not found" });
+    }
+
+    return res.status(200).json({ message: "Order deleted" });
   }
 
   return res.status(405).json({ message: "Method not allowed" });
