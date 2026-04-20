@@ -256,6 +256,19 @@ export async function updateCustomerAndOrders({
   throwIfSupabaseError(error, "Failed to update customer");
 }
 
+export async function deleteCustomerByPhone(phone) {
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase
+    .from("customers")
+    .delete()
+    .eq("phone", phone)
+    .select("phone")
+    .maybeSingle();
+
+  throwIfSupabaseError(error, "Failed to delete customer");
+  return Boolean(data?.phone);
+}
+
 export async function listOrders({ filter = "all", phone = "" } = {}) {
   const supabase = getSupabaseAdmin();
 

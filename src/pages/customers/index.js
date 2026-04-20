@@ -4,10 +4,13 @@ import Head from "next/head";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { useState } from "react";
+import toast from "react-hot-toast";
 
 export default function CustomersPage({ customers, initialQuery }) {
   const router = useRouter();
   const [search, setSearch] = useState(initialQuery || "");
+  const [customerRows, setCustomerRows] = useState(customers || []);
+  const [deletingPhone, setDeletingPhone] = useState("");
 
   function handleSearch(event) {
     event.preventDefault();
@@ -19,6 +22,46 @@ export default function CustomersPage({ customers, initialQuery }) {
     }
 
     router.push(`/customers?q=${encodeURIComponent(trimmed)}`);
+  }
+
+  async function handleDeleteCustomer(phone, name) {
+    if (deletingPhone) {
+      return;
+    }
+
+    const shouldDelete = window.confirm(
+      `Delete customer \"${name}\" (${phone})? Related orders and payments will also be deleted.`,
+    );
+
+    if (!shouldDelete) {
+      return;
+    }
+
+    setDeletingPhone(phone);
+
+    try {
+      const response = await fetch(
+        `/api/customers/${encodeURIComponent(phone)}`,
+        {
+          method: "DELETE",
+        },
+      );
+
+      const payload = await response.json();
+
+      if (!response.ok) {
+        throw new Error(payload.message || "Failed to delete customer");
+      }
+
+      setCustomerRows((previous) =>
+        previous.filter((customer) => customer.phone !== phone),
+      );
+      toast.success("Customer deleted");
+    } catch (error) {
+      toast.error(error.message || "Could not delete customer");
+    } finally {
+      setDeletingPhone("");
+    }
   }
 
   return (
@@ -44,7 +87,7 @@ export default function CustomersPage({ customers, initialQuery }) {
             placeholder="Search by name or phone"
             value={search}
             onChange={(event) => setSearch(event.target.value)}
-            className="min-w-[220px] flex-1 rounded-xl border border-slate-300 bg-white px-3 py-2 outline-none ring-amber-200 transition focus:ring"
+            className="min-w-55 flex-1 rounded-xl border border-slate-300 bg-white px-3 py-2 outline-none ring-amber-200 transition focus:ring"
           />
           <button
             type="submit"
@@ -66,7 +109,7 @@ export default function CustomersPage({ customers, initialQuery }) {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-slate-700">
-              {customers.length === 0 ? (
+              {customerRows.length === 0 ? (
                 <tr>
                   <td
                     className="px-4 py-4 text-center text-slate-500"
@@ -76,7 +119,7 @@ export default function CustomersPage({ customers, initialQuery }) {
                   </td>
                 </tr>
               ) : (
-                customers.map((customer) => (
+                customerRows.map((customer) => (
                   <tr key={customer.phone}>
                     <td className="px-4 py-3 font-medium text-slate-900">
                       {customer.name}
@@ -98,6 +141,18 @@ export default function CustomersPage({ customers, initialQuery }) {
                         >
                           View Orders
                         </Link>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            handleDeleteCustomer(customer.phone, customer.name)
+                          }
+                          disabled={deletingPhone === customer.phone}
+                          className="font-semibold text-rose-700 transition hover:text-rose-900 disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          {deletingPhone === customer.phone
+                            ? "Deleting..."
+                            : "Delete"}
+                        </button>
                       </div>
                     </td>
                   </tr>

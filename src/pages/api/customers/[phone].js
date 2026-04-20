@@ -1,4 +1,5 @@
 import {
+  deleteCustomerByPhone,
   getCustomerByPhone,
   isUniqueViolation,
   listOrdersByCustomerPhone,
@@ -86,6 +87,23 @@ export default withApiAuth(async function handler(req, res) {
       message: "Customer updated",
       customer_phone: nextPhone,
     });
+  }
+
+  if (req.method === "DELETE") {
+    const { phone } = req.query;
+    const normalizedPhone = String(phone || "").trim();
+
+    if (!normalizedPhone) {
+      return res.status(400).json({ message: "Phone is required" });
+    }
+
+    const deleted = await deleteCustomerByPhone(normalizedPhone);
+
+    if (!deleted) {
+      return res.status(404).json({ message: "Customer not found" });
+    }
+
+    return res.status(200).json({ message: "Customer deleted" });
   }
 
   return res.status(405).json({ message: "Method not allowed" });
