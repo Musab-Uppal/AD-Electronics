@@ -44,7 +44,7 @@ export default function OrdersPage({ orders, filter, phone }) {
       </Head>
 
       <section className="space-y-5">
-        <div className="grain-overlay relative overflow-hidden rounded-3xl border border-amber-200 bg-[linear-gradient(115deg,_#fff4e0,_#fffbf2_42%,_#e0f2fe)] p-6 shadow-sm">
+        <div className="grain-overlay relative overflow-hidden rounded-3xl border border-amber-200 bg-[linear-gradient(115deg,#fff4e0,#fffbf2_42%,#e0f2fe)] p-6 shadow-sm">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.22em] text-amber-700">
@@ -65,7 +65,7 @@ export default function OrdersPage({ orders, filter, phone }) {
             </div>
             <Link
               href="/orders/add"
-              className="rounded-xl bg-[linear-gradient(135deg,_#f59e0b,_#d97706)] px-4 py-2 text-sm font-semibold text-white transition hover:brightness-110"
+              className="rounded-xl bg-[linear-gradient(135deg,#f59e0b,#d97706)] px-4 py-2 text-sm font-semibold text-white transition hover:brightness-110"
             >
               Add New Order
             </Link>
@@ -97,6 +97,7 @@ export default function OrdersPage({ orders, filter, phone }) {
           <table className="min-w-full divide-y divide-slate-200 text-sm">
             <thead className="bg-slate-50 text-left text-[11px] uppercase tracking-wide text-slate-600">
               <tr>
+                <th className="px-4 py-3 font-semibold">No.</th>
                 <th className="px-4 py-3 font-semibold">Customer Name</th>
                 <th className="px-4 py-3 font-semibold">Phone</th>
                 <th className="px-4 py-3 font-semibold">Items</th>
@@ -114,14 +115,17 @@ export default function OrdersPage({ orders, filter, phone }) {
                 <tr>
                   <td
                     className="px-4 py-4 text-center text-slate-500"
-                    colSpan={10}
+                    colSpan={11}
                   >
                     No orders found.
                   </td>
                 </tr>
               ) : (
-                orders.map((order) => (
+                orders.map((order, index) => (
                   <tr key={order.id} className="hover:bg-amber-50/30">
+                    <td className="px-4 py-3 font-semibold text-slate-500">
+                      {index + 1}
+                    </td>
                     <td className="px-4 py-3 font-medium text-slate-900">
                       {order.customer_name}
                     </td>

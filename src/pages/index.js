@@ -156,25 +156,28 @@ export default function DashboardPage({ overdue, upcoming, stats, dbError }) {
           ) : (
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
               {upcoming.map((order) => (
-                <article
+                <Link
                   key={order.id}
-                  className="rounded-2xl border border-amber-200 bg-amber-50 p-4 shadow-sm"
+                  href={`/orders/${order.id}`}
+                  className="group block rounded-2xl outline-none ring-amber-200 transition focus-visible:ring-2"
                 >
-                  <h4 className="text-base font-bold text-amber-900">
-                    {order.customer_name}
-                  </h4>
-                  <p className="text-sm text-amber-800">
-                    Phone: {order.customer_phone}
-                  </p>
-                  <p className="mt-2 text-sm text-amber-900">
-                    <span className="font-semibold">Remaining:</span>{" "}
-                    {currency(order.remaining_balance)}
-                  </p>
-                  <p className="text-sm text-amber-900">
-                    <span className="font-semibold">Next Payment:</span>{" "}
-                    {order.next_payment_date}
-                  </p>
-                </article>
+                  <article className="rounded-2xl border border-amber-200 bg-amber-50 p-4 shadow-sm transition group-hover:-translate-y-0.5 group-hover:shadow-md">
+                    <h4 className="text-base font-bold text-amber-900">
+                      {order.customer_name}
+                    </h4>
+                    <p className="text-sm text-amber-800">
+                      Phone: {order.customer_phone}
+                    </p>
+                    <p className="mt-2 text-sm text-amber-900">
+                      <span className="font-semibold">Remaining:</span>{" "}
+                      {currency(order.remaining_balance)}
+                    </p>
+                    <p className="text-sm text-amber-900">
+                      <span className="font-semibold">Next Payment:</span>{" "}
+                      {order.next_payment_date}
+                    </p>
+                  </article>
+                </Link>
               ))}
             </div>
           )}
