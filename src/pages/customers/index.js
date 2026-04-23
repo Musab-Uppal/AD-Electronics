@@ -6,6 +6,24 @@ import { useRouter } from "next/router";
 import { useState } from "react";
 import toast from "react-hot-toast";
 
+async function parseResponsePayload(response) {
+  const raw = await response.text();
+
+  if (!raw) {
+    return {};
+  }
+
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return {
+      message: response.ok
+        ? "Request completed"
+        : "Server returned an unexpected response",
+    };
+  }
+}
+
 export default function CustomersPage({ customers, initialQuery }) {
   const router = useRouter();
   const [search, setSearch] = useState(initialQuery || "");
@@ -47,7 +65,7 @@ export default function CustomersPage({ customers, initialQuery }) {
         },
       );
 
-      const payload = await response.json();
+      const payload = await parseResponsePayload(response);
 
       if (!response.ok) {
         throw new Error(payload.message || "Failed to delete customer");
@@ -101,6 +119,7 @@ export default function CustomersPage({ customers, initialQuery }) {
           <table className="min-w-full divide-y divide-slate-200 text-sm">
             <thead className="bg-slate-50 text-left text-slate-700">
               <tr>
+                <th className="px-4 py-3 font-semibold">No.</th>
                 <th className="px-4 py-3 font-semibold">Name</th>
                 <th className="px-4 py-3 font-semibold">Phone</th>
                 <th className="px-4 py-3 font-semibold">Address</th>
@@ -113,14 +132,17 @@ export default function CustomersPage({ customers, initialQuery }) {
                 <tr>
                   <td
                     className="px-4 py-4 text-center text-slate-500"
-                    colSpan={5}
+                    colSpan={6}
                   >
                     No customers found.
                   </td>
                 </tr>
               ) : (
-                customerRows.map((customer) => (
+                customerRows.map((customer, index) => (
                   <tr key={customer.phone}>
+                    <td className="px-4 py-3 font-semibold text-slate-500">
+                      {index + 1}
+                    </td>
                     <td className="px-4 py-3 font-medium text-slate-900">
                       {customer.name}
                     </td>
